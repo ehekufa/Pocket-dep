@@ -162,7 +162,7 @@ allFunsRedRorms.connect = function(value,value2,value3) local answerValue = valu
 allFunsRedRorms.ternaryExpression = function(condition, answer1, answer2) return(condition and answer1 or answer2) end
 allFunsRedRorms.regularExpression = function(regular, expression) return(string.match(expression, regular)) end
 allFunsRedRorms.characterFromText = function(pos, value) return(plugins.utf8.sub(value,pos,pos)) end
-allFunsRedRorms.perlinNoise = function(x, y, seed) return plugins.perlin.new(x, y, seed) end
+allFunsRedRorms.perlinNoise = function(x, y, seed) return (0) end
 
 calculateRedactorFormulas = {
 	["+"]="+",["-"]="-",["÷"]="/",["×"]="*",["("]="(",[")"]=")",

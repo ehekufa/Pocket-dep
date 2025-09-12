@@ -19,12 +19,15 @@ m.start = function (p, object)
     local listener
     listener = function ()
         if object and object.x then
-            coroutine.resume(p)
+            local s, e = coroutine.resume(p)
+            if (not s) or e then
+                timer.cancel(t)
+            end
         else
             timer.cancel(t)
         end
     end
-    t = timer.performWithDelay(1000/60, listener, 0)
+    t = timer.performWithDelay(0, listener, 0)
     table.insert(m.timers, t)
     return listener, t
 end

@@ -92,11 +92,15 @@ app.cerberus.newVatiants = function (variants, onComplete)
 	transition.to(backgroundBlackAlpha, {time=150, alpha=1})
 	transition.to(group, {time=150, alpha=1})
 
+	local y = CENTER_Y + rect.height/2
+	if #variants < math.floor(display.actualContentHeight/(display.contentWidth/8+display.contentWidth/50)) then
+		y = y + display.actualContentHeight/2 - rect.height/2
+	end
 	scroll = plugins.widget.newScrollView({
-		x = rect.x,
-		y = rect.y + rect.height/2,
+		x = CENTER_X,
+		y = y,
 		width = display.contentWidth,
-		height = rect.height,
+		height = display.contentHeight,
 		horizontalScrollDisabled = true,
 		hideBackground = true,
 		hideScrollBar = false,

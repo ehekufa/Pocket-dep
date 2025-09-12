@@ -1,9 +1,9 @@
-lua = nil
+_G.lua = nil
 local makeBlock_other = require("pocketup.gameAndBlocks.launchBlocks_other")
 local makeBlock_cerberus = require("pocketup.gameAndBlocks.launchBlocks_cerberus")
-local _Vars = {}
+-- local _Vars = {}
 
-local lang = system.getPreference( "locale", "language" )
+-- local lang = system.getPreference( "locale", "language" )
 local renameFormulas = calculateGameFormulas
 
 function encodeList(event)
@@ -17,10 +17,9 @@ function encodeList(event)
     end
     return(answer)
 end
-local function decodeList(event)
-    return(plugins.json.decode("["..event:gsub("\n",'","'):gsub("\r\n",'","').."]"))
-end
-
+-- local function decodeList(event)
+--     return(plugins.json.decode("["..event:gsub("\n",'","'):gsub("\r\n",'","').."]"))
+-- end
 
 local function make_all_formulas(formulas, object)
     local tableInfoObject = {
@@ -69,7 +68,7 @@ local isEvent = {
     keypressed=true, endKeypressed = true, whenTheTruth = true
 }
 
-function noremoveAllObjects()
+function _G.noremoveAllObjects()
     local stage = display.getCurrentStage()
 
     for i = stage.numChildren, 1, -1 do
@@ -80,7 +79,7 @@ function noremoveAllObjects()
     end
 end
 
-function removeAllObjects()
+function _G.removeAllObjects()
     local stage = display.getCurrentStage()
 
     for i = stage.numChildren, 1, -1 do
@@ -95,7 +94,7 @@ function removeAllObjects()
 end
 
 
-function scene_run_game(typeBack, paramsBack)
+function _G.scene_run_game(typeBack, paramsBack)
     BlocksAllHandlers = {}
     local moduleHandlers = {'data', 'control', 'textFields', 'sounds', 'physics', 'pen', 'particles', 'miniScenes', 'images', 'elementInterface', 'device','videos'}
     for _, module in ipairs(moduleHandlers) do
@@ -113,7 +112,7 @@ function scene_run_game(typeBack, paramsBack)
     native.setProperty("windowMode", "fullscreen")
     display.setDefault('background', 1, 1, 1)
 
-    local options = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/options'))
+    local options = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/options')) or {}
     if utils.isWin or utils.isSim then
         options.orientation = "vertical"
     end
@@ -124,14 +123,14 @@ function scene_run_game(typeBack, paramsBack)
     renameFormulas.displayActualHeight = "("..tostring(options.orientation == "vertical" and display.actualContentHeight or display.actualContentWidth)..")"
 
 
-    function showOldScene()
+    function _G.showOldScene()
         app.words = require("pocketup.modules.loadLanguage")
         native.setProperty("windowMode", "normal")
         display.setDrawMode( 'default' )
         display.setDefault("background", 4/255, 34/255, 44/255)
 
         plugins.orientation.lock('portrait')
-    
+
         display.screenOriginX, display.screenOriginY = sOX, sOY
         display.contentWidth, display.contentHeight = dW, dH
         display.contentCenterX = dCX
@@ -151,7 +150,7 @@ function scene_run_game(typeBack, paramsBack)
         end
     end
 
-    max_fors = 0
+    _G.max_fors = 0
 
 -- Запуск
 lua = ''
@@ -331,14 +330,13 @@ pocketupFuns.countTouchesObjects = function(target)
 end
 ]==]
 
--- Глобальные переменные
-local globalVariables = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/variables'))
+local globalVariables = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/variables')) or {}
 for i=1, #globalVariables do
     lua = lua.."var_"..globalVariables[i][1].." = 0\n"
 end
 
 -- Глобальные массивы
-local globalArrays = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/arrays'))
+local globalArrays = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/arrays')) or {}
 for i=1, #globalArrays do
     lua = lua.."list_"..globalArrays[i][1].." = {}\n"
 end
@@ -462,8 +460,8 @@ function scene_]]..scene_id..[[()
     ]]
     
     -- Объекты из сцены
-    local objects = plugins.json.decode(funsP['получить сохранение'](scene_path.."/objects"))
-    local functions = plugins.json.decode(funsP['получить сохранение'](scene_path.."/functions"))
+    local objects = plugins.json.decode(funsP['получить сохранение'](scene_path.."/objects")) or {}
+    local functions = plugins.json.decode(funsP['получить сохранение'](scene_path.."/functions")) or {}
 
     for i=1, #objects do
         if type(objects[i][2]) ~= "string" then
@@ -505,9 +503,9 @@ function scene_]]..scene_id..[[()
 
             local obj_id = objects[o][2]
             local obj_path = scene_path.."/object_"..obj_id
-            local obj_images = plugins.json.decode(funsP['получить сохранение'](obj_path.."/images"))
-            local obj_sounds = plugins.json.decode(funsP['получить сохранение'](obj_path.."/sounds"))
-            local obj_videos = plugins.json.decode(funsP['получить сохранение'](obj_path.."/videos"))
+            local obj_images = plugins.json.decode(funsP['получить сохранение'](obj_path.."/images")) or {}
+            local obj_sounds = plugins.json.decode(funsP['получить сохранение'](obj_path.."/sounds")) or {}
+            local obj_videos = plugins.json.decode(funsP['получить сохранение'](obj_path.."/videos")) or {}
         
             lua = lua..
             [=[
@@ -571,7 +569,7 @@ function scene_]]..scene_id..[[()
             lua = lua.."object_"..obj_id..".countImages = "..tostring(#obj_images).."\n"
 
             -- Локальные переменные
-            local localVariables = plugins.json.decode(funsP['получить сохранение'](obj_path.."/variables"))
+            local localVariables = plugins.json.decode(funsP['получить сохранение'](obj_path.."/variables")) or {}
             lua = lua.."object_"..obj_id..".namesVars = {}\n"
             for i = 1, #localVariables do
                 lua = lua.."object_"..obj_id..".var_"..localVariables[i][1].." = 0\n"
@@ -579,7 +577,7 @@ function scene_]]..scene_id..[[()
             end
 
             -- Локальные массивы
-            local localArrays = plugins.json.decode(funsP['получить сохранение'](obj_path.."/arrays"))
+            local localArrays = plugins.json.decode(funsP['получить сохранение'](obj_path.."/arrays")) or {}
             lua = lua.."object_"..obj_id..".namesLists = {}\n"
             for i=1, #localArrays do
                 lua = lua.."object_"..obj_id..".list_"..localArrays[i][1].." = {}\n"
@@ -648,7 +646,7 @@ function scene_]]..scene_id..[[()
             ]]
 
             -- Блоки
-            local blocks = plugins.json.decode(funsP['получить сохранение'](obj_path.."/scripts"))
+            local blocks = plugins.json.decode(funsP['получить сохранение'](obj_path.."/scripts")) or {}
             local oldEventName = nil
             local oldEvent = nil
             for b=1, #blocks do
@@ -894,10 +892,12 @@ end"
         timers[i] = nil\
     end\
     display.remove(scene.mainGroup)\
-    for key, value in pairs(scene.playingSounds) do\
-        audio.stop(scene.playingSounds[key])\
-        audio.dispose(scene.playSounds[key])\
-    end\
+        for key, value in pairs(playSounds) do\
+            for key2, value2 in pairs(value) do\
+                audio.stop(value2.channel)\
+                audio.dispose(value2.sound)\
+            end\
+        end\
     Scenes[id] = nil\
     scene = nil\
     collectgarbage('collect')\
@@ -912,9 +912,11 @@ end"
         end\
         audio.stop()\
         audio.dispose()\
-        for key, value in pairs(playingSounds) do\
-            audio.stop(playingSounds[key])\
-            audio.dispose(playSounds[key])\
+        for key, value in pairs(playSounds) do\
+            for key2, value2 in pairs(value) do\
+                audio.stop(value2.channel)\
+                audio.dispose(value2.sound)\
+            end\
         end\
         removeAllObjects()\
         transition.cancelAll()\
@@ -959,9 +961,10 @@ end"
     timer.pauseAll()\
     "..(options.orientation=="vertical" and "plugins.orientation.lock('portrait')" or "plugins.orientation.lock('landscape')")..
     "\
-    for key, value in pairs(playingSounds) do\
-        audio.pause(playingSounds[key])\
-        --audio.dispose(playSounds[key])\
+    for key, value in pairs(playSounds) do\
+        for key2, value2 in pairs(value) do\
+            audio.pause(value2.channel)\
+        end\
     end\
     \
     WebViews = {}\
@@ -1005,21 +1008,21 @@ end
     end
     local f, error_msg = loadstring(lua)
     --print(lua)
-    if false then
-        pcall(function ()
-            local export = require('plugins.export')
-            local file = io.open(system.pathForFile('', system.TemporaryDirectory)..'/debugCode.txt', 'w')
-            file:write(lua)
-            file:close()
-            export.export {
-                path = system.pathForFile('debugCode.txt', system.TemporaryDirectory),
-                name = 'debugCode_'..app.idProject..'.lua',
-                listener = function ()
+    -- if false then
+    --     pcall(function ()
+    --         local export = require('plugins.export')
+    --         local file = io.open(system.pathForFile('', system.TemporaryDirectory)..'/debugCode.txt', 'w')
+    --         file:write(lua)
+    --         file:close()
+    --         export.export {
+    --             path = system.pathForFile('debugCode.txt', system.TemporaryDirectory),
+    --             name = 'debugCode_'..app.idProject..'.lua',
+    --             listener = function ()
                     
-                end
-            }
-        end)
-    end
+    --             end
+    --         }
+    --     end)
+    -- end
     if f then
         local status, error_msg = pcall(f)
         if not status then

@@ -1,57 +1,91 @@
 return {
-    playSound = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
-        if infoBlock[2][1][2]~=nil then
-            local lua = "pcall(function()\n"
-            lua = lua..'if not playSounds['..infoBlock[2][1][2]..'] then\n'
-            lua = lua..'playSounds['..infoBlock[2][1][2]..'] = audio.loadSound(\''..obj_path..'/sound_'..infoBlock[2][1][2]..'.mp3\', system.DocumentsDirectory)\n'
-            lua = lua..'end\naudio.stop(playingSounds['..infoBlock[2][1][2]..'])\n'
-            lua = lua..'playingSounds['..infoBlock[2][1][2]..'] = audio.play(playSounds['.. infoBlock[2][1][2]..'])'
-            return lua.."\nend)"
+    playSound = function(infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
+        if infoBlock[2] and infoBlock[2][1] and infoBlock[2][1][2] ~= nil then
+            local soundId = infoBlock[2][1][2]
+            local soundFile = obj_path .. '/sound_' .. soundId .. '.mp3'
+
+            local lua = [[
+    pcall(function()
+        if not playSounds[ ]] .. soundId .. [[ ] then
+            playSounds[ ]] .. soundId .. [[ ] = {}
+        end
+        local sound = audio.loadSound(']] .. soundFile .. [[', system.DocumentsDirectory)
+        local channel = audio.play(sound)
+        table.insert(playSounds[ ]] .. soundId .. [[ ], {sound = sound, channel = channel})
+    end)
+            ]]
+            return lua
         end
     end,
 
-    playSoundAndWait = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
-        local lua = "pcall(function()\n"
-        lua = lua..
-        "if not playSounds["..infoBlock[2][1][2].."] then\
-            playSounds["..infoBlock[2][1][2].."] = audio.loadSound('"..obj_path.."/sound_"..infoBlock[2][1][2]..".mp3', system.DocumentsDirectory)\
-        end\
-        pcall(function()\
-            audio.stop(playingSounds["..infoBlock[2][1][2].."])\
-        end)\
-        playingSounds["..infoBlock[2][1][2].."] = audio.play(playSounds[".. infoBlock[2][1][2].."])"
-        lua = lua.."\nend)"
-        lua = lua.."\
-        local time = audio.getDuration(playSounds["..infoBlock[2][1][2].."])\
-        threadFun.wait(time)"
+    playSoundAndWait = function(infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
+        local soundId = infoBlock[2][1][2]
+        local lua = [[
+    local sound
+    pcall(function()
+        if not playSounds[ ]] .. soundId .. [[ ] then
+            playSounds[ ]] .. soundId .. [[ ] = {}
+        end
+        sound = audio.loadSound(']] .. obj_path .. [[/sound_]] .. soundId .. [[.mp3', system.DocumentsDirectory)
+        local channel = audio.play(sound)
+        table.insert(playSounds[ ]] .. soundId .. [[ ], {sound = sound, channel = channel})
+    end)
+    local time = audio.getDuration(sound)
+    threadFun.wait(time)
+        ]]
         return lua
     end,
 
-    stopSound = function (infoBlock, object, images, sounds, make_all_formulas)
-        if infoBlock[2][1][2]~=nil then
-            local lua = "pcall(function()\n"
-            lua = lua.."audio.stop(playingSounds["..infoBlock[2][1][2].."])\naudio.dispose(playSounds[".. infoBlock[2][1][2].."])\nplaySounds[".. infoBlock[2][1][2].."] = nil"
-            return lua.."\nend)"
+    stopSound = function(infoBlock, object, images, sounds, make_all_formulas)
+        if infoBlock[2][1][2] ~= nil then
+            local soundId = infoBlock[2][1][2]
+            local lua = [[
+    pcall(function()
+        if playSounds[ ]] .. soundId .. [[ ] then
+            for _, soundData in ipairs(playSounds[ ]] .. soundId .. [[ ]) do
+                audio.stop(soundData.channel)
+                audio.dispose(soundData.sound)
+            end
+            playSounds[ ]] .. soundId .. [[ ] = nil
+        end
+    end)
+            ]]
+            return lua
         end
     end,
 
-    stopAllSounds = function ()
-        local lua = "pcall(function()\n"
-        lua = lua.."audio.stop()\naudio.dispose()\nplaySounds = {}"
-        return lua.."\nend)"
+    stopAllSounds = function()
+        local lua = [[
+    pcall(function()
+        for soundId, sounds in pairs(playSounds) do
+            for _, soundData in ipairs(sounds) do
+                audio.stop(soundData.channel)
+                audio.dispose(soundData.sound)
+            end
+        end
+        playSounds = {}
+    end)
+        ]]
+        return lua
     end,
 
-    setVolumeSound = function (infoBlock, object, images, sounds, make_all_formulas)
-        local lua = "pcall(function()\n"
-        local volume = make_all_formulas(infoBlock[2][1], object)
-        lua = lua.."audio.setVolume("..volume.."/100)"
-        return lua.."\nend)"
+    setVolumeSound = function(infoBlock, object, images, sounds, make_all_formulas)
+        local lua = [[
+    pcall(function()
+        local volume = ]] .. make_all_formulas(infoBlock[2][1], object) .. [[
+        audio.setVolume(volume/100)
+    end)
+        ]]
+        return lua
     end,
 
-    editVolumeSound = function (infoBlock, object, images, sounds, make_all_formulas)
-        local lua = "pcall(function()\n"
-        local volume = make_all_formulas(infoBlock[2][1], object)
-        lua = lua.."audio.setVolume(audio.getVolume() + "..volume.."/100 )"
-        return lua.."\nend)"
+    editVolumeSound = function(infoBlock, object, images, sounds, make_all_formulas)
+        local lua = [[
+    pcall(function()
+        local volume = ]] .. make_all_formulas(infoBlock[2][1], object) .. [[
+        audio.setVolume(audio.getVolume() + volume/100)
+    end)
+        ]]
+        return lua
     end,
 }

@@ -13,7 +13,7 @@ timer.GameNew2 = function (time, rep, onComplete, listener)
         end
     end, rep)
 end
-local max_fors = 0
+-- local max_fors = 0
 local nameBlock
 local lua
 local add_pcall = function ()

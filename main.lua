@@ -1,4 +1,4 @@
-collectgarbage("setpause", 2000)
+collectgarbage("setpause", 1000)
 collectgarbage("setstepmul", 200)
 IsBuild = nil
 native.setProperty("windowMode", "normal")
@@ -7,13 +7,19 @@ display.setStatusBar(display.HiddenStatusBar)
 display.setStatusBar(display.TranslucentStatusBar)
 display.setStatusBar(display.HiddenStatusBar)
 
-local function decodeString(encoded)
-    local decoded = ""
-    for _, v in ipairs(encoded) do
-        decoded = decoded .. string.char(v)
-    end
-    return decoded
+-- local function decodeString(encoded)
+--     local decoded = ""
+--     for _, v in ipairs(encoded) do
+--         decoded = decoded .. string.char(v)
+--     end
+--     return decoded
+-- end
+
+local unhandledErrorListener = function( event )
+    print( "We have a problem: " .. event.errorMessage )
+    return true
 end
+Runtime:addEventListener( "unhandledError", unhandledErrorListener )
 
 timer.performWithDelay(system.getInfo 'environment' == 'simulator' and 0 or 100, function()
     display.setStatusBar(display.HiddenStatusBar)
@@ -84,6 +90,8 @@ timer.performWithDelay(system.getInfo 'environment' == 'simulator' and 0 or 100,
             text:toFront()
         end)
     end
+
+    -- local a = 1/nil
 end)
 
 _G.funsP = {}
