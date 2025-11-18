@@ -4,43 +4,7 @@ local function f(localityVariable, nameVariable, localityArray, nameArray, nameF
 	print(nameVideo , "dbfdf")
 	local myTable = {
 		["used"]={
-			{"whenTheTruth",{ {{"number", 1},{"function", "<"},{"number", 2}} }},
-
-			{"createVideo", { {"videos", nameVideo}, {{"number", 200}}, {{"number", 300}}, {{"number", 100}}, {{"number", 200}} }},
-			{"setPositionVideo", {{"videos", nameVideo},{{"number", 100}}, {{"number", 200}} }},
-			{"setPositionXVideo", {{{"number", 100}},{"videos", nameVideo}}},
-			{"setPositionYVideo", {{{"number", 200}},{"videos", nameVideo}}},
-			{"editPositionXVideo", {{{"number", 10}},{"videos", nameVideo}}},
-			{"editPositionYVideo", {{{"number", 20}},{"videos", nameVideo}}},
-			{"playVideo", {{"videos", nameVideo}}},
-			{"pauseVideo", {{"videos", nameVideo}}},
-			{"seekVideo", {{"videos", nameVideo}, {{"number", 16}}}},
-			{"deleteVideo", {{"videos", nameVideo}}},
-			{"insertVideoToCamera", {{"videos", nameVideo}}},
-			{"removeVideoToCamera", {{"videos", nameVideo}}},
-			{"insertVideoToMiniScene", {{"videos", nameVideo}, {{"text", app.words[530]}}}},
-			{"eventListenerVideo", {{"videos", nameVideo}, {localityVariable, nameVariable}}},
-			
-			{"continueScene",{ {"scenes", nameScene} }},
-			{"deleteScene",{ {"scenes", nameScene} }},
-			
-			{"runLua",{ {{"text", 'local a = display.newRect(100, 100, 50, 50)'}} }},
-			
-			{"removeCameraTextField", {{{"text", app.words[493]}}}},
-			{"insertCameraTextField", {{{"text", app.words[493]}}}},
-			{"setPositionTextField", {{{"text", app.words[493]}}, {{"number", 100}}, {{"number", 200}}}},
-			{"editPositionTextField", {{{"text", app.words[493]}}, {{"number", 10}}, {{"number", 20}}}},
-			{"setFontSizeTextField", {{{"text", app.words[493]}}, {{"number", 16}}}},
-			{"setTypeInputTextField", {{{"text", app.words[493]}}, {"inputType", "phone"}}},
-			{"setAlignTextField", {{{"text", app.words[493]}}, {"alignText", "center"}}},
-			{"isSecureTextField", {{{"text", app.words[493]}}, {{"onOrOff", "on"}}}},
-			{"placeholderTextField", {{{"text", app.words[493]}}, {{"text", app.words[164]}}}},
-			{"valueTextField", {{{"text", app.words[493]}}, {{"text", app.words[164]}}}},
-			{"setColorTextField", {{{"text", app.words[493]}}, {{"text", "#FF0000"}}}},
-			{"setSelectionTextField", {{{"text", app.words[493]}}, {{"number", 2}}, {{"number", 4}}}},
-			{"getSelectionTextField", {{{"text", app.words[493]}}, {{"globalVariable"}}, {{"globalVariable"}}}},
-			{"setKeyboardToTextField", {{{"text", app.words[493]}}}},
-			{"removeKeyboardToTextField", {{{"text", app.words[493]}}}},
+			{"changeLayer", {{{"number", 0}}}},
 		},
 		["event"]={
 			{"keypressed",{{localityVariable, nameVariable}}},
@@ -105,10 +69,12 @@ local function f(localityVariable, nameVariable, localityArray, nameArray, nameF
 			{"editPositionX",{ {{"number", 10}} }},
 			{"editPositionY",{ {{"number", 10}} }},
 			{"goTo",{ {"goTo", "touch"} }},
+			{"changeLayer", {{{"number", 0}}}},
 			{"goSteps",{ {{"number", 10}} }},
 			{"editRotateLeft",{ {{"number", 15}} }},
 			{"editRotateRight",{ {{"number", 15}} }},
 			{"setRotate",{ {{"number", 90}} }},
+			{"setRotationDegPerSecond", {{{"number", 10}}}},
 			{"setRotateToObject",{{"objects",nameObject}}},
 			{"setTypeRotate",{{"typeRotate","false"}}},
 			{"transitionPosition2",{ {{"number",1}}, {{"number",100}}, {{"number",200}} }},
@@ -136,6 +102,7 @@ local function f(localityVariable, nameVariable, localityArray, nameArray, nameF
 			{"setQuareHitbox"},
 			{"setQuareWHHitbox", {{{"number", 100}}, {{"number", 200}}}},
 			{"setCircleHitbox", {{{"number", 200}}}},
+			
 		},
 		["sounds"]={
 			{"playSound", {{"sounds",nameSound}}},
@@ -145,7 +112,12 @@ local function f(localityVariable, nameVariable, localityArray, nameArray, nameF
 			{"stopAllSounds"},
 			{"setVolumeSound",{{{"number",60}}}},
 			{"editVolumeSound", {{{"function","-"},{"number",10}}}},
-
+			{"playSoundId", {{{"number", 1}}}},
+			{"playSoundIdAndWait", {{{"number", 1}}}},
+			{"setVolumeSoundSpecific", {{{"sounds", nameSound}}, {{"number", 60}}}},
+			{"setVolumeSoundIdSpecific", {{{"number", 0}}, {{"number", 60}}}}
+		},
+		["videos"] = {
 			{"createVideo", { {"videos", nameVideo}, {{"number", 200}}, {{"number", 300}}, {{"number", 100}}, {{"number", 200}} }},
 			{"setPositionVideo", {{"videos", nameVideo},{{"number", 100}}, {{"number", 200}} }},
 			{"setPositionXVideo", {{{"number", 100}},{"videos", nameVideo}}},

@@ -470,14 +470,14 @@ local function createProjectSlot()
     buttonRect:addEventListener("touch", touchOpenProject)
     
     iSort = iSort + 1
-    timer.performWithDelay(5, createProjectSlot)
+    timer.performWithDelay(1, createProjectSlot)
 end
 
-timer.performWithDelay(5, createProjectSlot)
+timer.performWithDelay(1, createProjectSlot)
 scrollProjects:setScrollHeight(groupSceneScroll.height+display.contentWidth/1.5)
 
 
-local circlePlus = display.newCircle(CENTER_X+display.contentWidth/2-display.contentWidth/8, CENTER_Y+display.contentHeight/2-display.contentWidth/8-75, display.contentWidth/11.5)
+local circlePlus = display.newCircle(CENTER_X+display.viewableContentWidth/2-display.viewableContentWidth/8, CENTER_Y+display.viewableContentHeight/2-display.viewableContentWidth/8, display.viewableContentWidth/11.5)
 circlePlus:setFillColor(1, 172/255, 8/255)
 groupScene:insert(circlePlus)
 local circlePlusAlpha = display.newCircle(circlePlus.x, circlePlus.y, display.contentWidth/11.5)

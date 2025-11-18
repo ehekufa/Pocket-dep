@@ -670,7 +670,8 @@
     "Show system panels",
     "Joystick name",
     "Create this actor from spritesheet",
-     "с шириной", "высотой", "кадрами"/*674*/,"шум перлина",
-"Засыпание устройства","Задержка обнаружения касания","Удалить все клоны объекта","Каркасная отрисовка"
+     "with width", "and height", "frames"/*674*/,"perlin noise",
+"Засыпание устройства","Задержка обнаружения касания","Удалить все клоны объекта","Каркасная отрисовка", "Video", "Change layer for",
+  "Play sound at number", "Set sound", "volume to"
   ]
   

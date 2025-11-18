@@ -162,6 +162,7 @@ lua = lua..options.orientation=="horizontal" and "plugins.orientation.lock('land
 lua = lua..[==[
 system.activate('multitouch')
 plugins.physics.start(true)
+audio.setVolume(1.0, { channel = 0 })
 
 local function getImageProperties(path, dir)
     local image = display.newImage(path, dir)
@@ -1023,6 +1024,7 @@ end
     --         }
     --     end)
     -- end
+
     if f then
         local status, error_msg = pcall(f)
         if not status then

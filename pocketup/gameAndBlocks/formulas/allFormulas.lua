@@ -75,7 +75,7 @@ allCategotiesAndFormulas = {
 			{{"function","touchesObject"}},
 			{{"function","touchesObject2"}},
 			{{"function","touchesFinger"}},{{"function","speedX"}},{{"function","speedY"}},
-			{{"function","angularVelocity"}} }}
+			{{"function","angularVelocity"}}, {{"function", "rotationSpeed"}} }}
 		},
 	device={
 		{app.words[347],{
@@ -134,7 +134,7 @@ nameFormulas = {
 	day=app.words[364],dayWeek=app.words[365],hour=app.words[366],minute=app.words[367],second=app.words[368],
 	displayWidth=app.words[477],displayHeight=app.words[478],displayActualWidth=app.words[479],displayActualHeight=app.words[480],
 	array2json=app.words[482],json2array=app.words[483],positionCameraX=app.words[484],positionCameraY=app.words[485],
-	touchesObject2=app.words[617],myName=app.words[620],mouseX=app.words[625],mouseY=app.words[626]
+	touchesObject2=app.words[617],myName=app.words[620],mouseX=app.words[625],mouseY=app.words[626],rotationSpeed=app.words[688]
 }
 
 
@@ -188,7 +188,7 @@ calculateRedactorFormulas = {
 	displayWidth="(720)",displayHeight="(1280)",displayActualWidth="("..tostring(display.actualContentWidth)..")",
 	displayActualHeight="("..tostring(display.actualContentHeight)..")",array2json="allFunsRedRorms.getJson",json2array="allFunsRedRorms.getNil",
 	touchesObject2="false",myName='"'..app.words[444]..'"',mouseX="(0)",mouseY="(0)",
-		perlinNoise = "allFunsRedRorms.perlinNoise"
+		perlinNoise = "allFunsRedRorms.perlinNoise", rotationSpeed="target.angularVelocity"
 }
 
 
@@ -219,4 +219,5 @@ calculateGameFormulas = {
         minute="tonumber(os.date('%M', os.time()))",second="tonumber(os.date('%S', os.time()))",
         json2array="pocketupFuns.jsonEncode", array2json="plugins.json.encode",positionCameraX="(cameraGroup.x)",
         positionCameraY="(-cameraGroup.x)",myName="(target.myName==nil and 0 or target.myName)",mouseX="mouseX",mouseY="mouseY", perlinNoise = "pocketupFuns.perlinNoise",
+		rotationSpeed="target.angularVelocity"
 }

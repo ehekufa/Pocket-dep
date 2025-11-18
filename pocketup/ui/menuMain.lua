@@ -46,15 +46,17 @@ function scene_menu()
 
    
 
-    local y = display.actualContentWidth/(#texts/1.5)/2+55
+    local y = display.actualContentWidth/(#texts/1.5)/2+50
     for i = 1, #texts do
         if i < 2 then
-            local a = display.newImageRect('images/menubutton.jpg', display.actualContentWidth, display.actualContentWidth/(#texts/1.5)+100)
+            local a = display.newRect(0, 0, display.actualContentWidth, display.actualContentWidth/(#texts/1.5)+100)
+            a:setFillColor(0, 71/255, 93/255)
             scrollItems:insert(a)
             a.y = y
             a.x = CENTER_X 
             local icon = display.newImageRect(texts[i].icon, 128, 128)
             local arrow = display.newImage('images/arrow.png')
+            --arrow:setFillColor(171/255, 219/255, 241/255)
             local textShadow = display.newText(texts[i].text, 0, 0, nil, 35)
             local text = display.newText(texts[i].text, 0, 0, nil, 35)
             local textRecentProjectShadow = display.newText(recentProjectName, 0, 0, nil, 30)
@@ -78,39 +80,43 @@ function scene_menu()
             textRecentProject.y = y+20
             textRecentProjectShadow.x = textRecentProject.x
             textRecentProjectShadow.y = textRecentProject.y+2
-            textRecentProjectShadow.alpha = 0.4
+            textRecentProjectShadow.alpha = 0
             text:setFillColor(181/255, 234/255, 248/255)
             textShadow:setFillColor(0)
             text.y = y-20
             textShadow.x = text.x
             textShadow.y = text.y+2
-            textShadow.alpha = 0.4
+            textShadow.alpha = 0
             scrollItems:insert(textShadow)
             scrollItems:insert(text)
+
+            local splitter = display.newRect(CENTER_X, y+a.height/2, display.actualContentWidth-70, 2)
+            scrollItems:insert(splitter)
+            splitter:setFillColor(4/255, 34/255, 44/255)
             
             arrow.width = arrow.width/4
             arrow.height = arrow.height/4
             scrollItems:insert(arrow)
             arrow.x = display.actualContentWidth-arrow.width
             arrow.y = y
-            y = y + a.height-45
+            y = y + a.height-50
             a:addEventListener('touch', function (event)
                 if event.phase == 'began' then
-                    event.target.alpha = 0.5
+                    event.target:setFillColor(23/255,91/255,114/255)
                     display.getCurrentStage():setFocus(event.target, event.id)
-                    arrow.alpha = 0.5
+                    --arrow.alpha = 0.5
                 elseif event.phase == 'moved' then
                     local dy = math.abs( ( event.y - event.yStart ) )
                     -- If the touch on the button has moved more than 10 pixels,
                     -- pass focus back to the scroll view so it can continue scrolling
                     if ( dy > 10 ) then
                         scrollItems:takeFocus( event )
-                        event.target.alpha = 1
-                        arrow.alpha = 1
+                        event.target:setFillColor(0, 71/255, 93/255)
+                        --arrow.alpha = 1
                     end
                 elseif event.phase == 'ended' then
-                    event.target.alpha = 1
-                    arrow.alpha = 1
+                    event.target:setFillColor(0, 71/255, 93/255)
+                    --arrow.alpha = 1
                     display.getCurrentStage():setFocus(event.target, nil)
                    
                     if recentProjectName ~= '' then
@@ -128,7 +134,8 @@ function scene_menu()
                 return 1
             end)
         else
-            local a = display.newImageRect('images/menubutton.jpg', display.actualContentWidth, display.actualContentWidth/(#texts/1.5))
+            local a = display.newRect(0, 0, display.actualContentWidth, display.actualContentWidth/(#texts/1.5))
+            a:setFillColor(0, 71/255, 93/255)
             scrollItems:insert(a)
             a.y = y
             a.x = CENTER_X
@@ -146,12 +153,16 @@ function scene_menu()
             icon.x = display.screenOriginX+icon.width/2+15
             textShadow.x = text.x
             textShadow.y = y+2
-            textShadow.alpha = 0.4
+            textShadow.alpha = 0
             text:setFillColor(181/255, 234/255, 248/255)
             scrollItems:insert(textShadow)
             scrollItems:insert(text)
             scrollItems:insert(icon)
             a.i = i
+
+            local splitter = display.newRect(CENTER_X, y+a.height/2, display.actualContentWidth-70, 2)
+            scrollItems:insert(splitter)
+            splitter:setFillColor(4/255, 34/255, 44/255)
             
             local arrow = display.newImage('images/arrow.png')
             arrow.width = arrow.width/4
@@ -161,22 +172,22 @@ function scene_menu()
             arrow.y = y
             a:addEventListener('touch', function (event)
                 if event.phase == 'began' then
-                    event.target.alpha = 0.5
+                    event.target:setFillColor(23/255,91/255,114/255)
                     display.getCurrentStage():setFocus(event.target, event.id)
-                    arrow.alpha = 0.5
+                    --arrow.alpha = 0.5
                 elseif event.phase == 'moved' then
                     local dy = math.abs( ( event.y - event.yStart ) )
                     -- If the touch on the button has moved more than 10 pixels,
                     -- pass focus back to the scroll view so it can continue scrolling
                     if ( dy > 10 ) then
                         scrollItems:takeFocus( event )
-                        event.target.alpha = 1
-                        arrow.alpha = 1
+                        event.target:setFillColor(0, 71/255, 93/255)
+                        --arrow.alpha = 1
                     end
                 elseif event.phase == 'ended' then
-                    event.target.alpha = 1
+                    event.target:setFillColor(0, 71/255, 93/255)
                     display.getCurrentStage():setFocus(event.target, nil)
-                    arrow.alpha = 1
+                    --arrow.alpha = 1
                     if event.target.i == 3 then
                         local link = {104, 116, 116, 112, 115, 58, 47, 47, 116, 46, 109, 101, 47, 112, 111, 99, 107, 101, 116, 95, 117, 112, 95, 99, 104, 97, 116}
                         system.openURL(decodeString(link))
@@ -195,7 +206,7 @@ function scene_menu()
                 end
                 return 1
             end)
-            y = y + a.height+5
+            y = y + a.height
         end 
     end
     groupScene:insert(scrollItems)

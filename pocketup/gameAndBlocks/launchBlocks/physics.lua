@@ -265,4 +265,37 @@ return {
         lua = lua.."target.physicsTable.radius, target.physicsTable.outline, target.physicsTable.shape = "..make_all_formulas(infoBlock[2][1], object)..", nil, nil\ntarget:physicsReload()"
         return lua .. "\nend)"
     end,
+
+    changeLayer = function (infoBlock, object, images, sounds, make_all_formulas)
+        local lua = "local g = target.parent\n"
+
+        lua = lua .. "local oldIndex = 0\n"
+        lua = lua .. "for i = 1, g.numChildren do\n"
+        lua = lua .. "    if g[i] == target then oldIndex = i; break end\n"
+        lua = lua .. "end\n"
+
+        local formula = make_all_formulas(infoBlock[2][1], object)
+        
+        lua = lua .. "local newIndex = oldIndex + (" .. formula .. ")\n"
+        lua = lua .. "g:insert(newIndex, target)\n"
+        
+        lua = lua .. "print(\"Layer changed from \"..oldIndex..\" to \"..newIndex)\n"
+        
+        return lua
+    end,
+
+    setRotationDegPerSecond = function (infoBlock, object, images, sounds, make_all_formulas)
+        local deg = make_all_formulas(infoBlock[2][1], object)
+
+        local lua = [[
+        local deg = ]]..deg..[[
+        pcall(function()
+            local radPerSec = deg
+
+            target.angularVelocity = radPerSec
+        end)
+        ]]
+
+        return lua
+    end
 }

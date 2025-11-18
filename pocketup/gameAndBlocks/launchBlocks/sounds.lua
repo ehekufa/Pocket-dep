@@ -88,4 +88,78 @@ return {
         ]]
         return lua
     end,
+
+    playSoundId = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
+        local soundId = make_all_formulas(infoBlock[2][1], object)
+        local lua = [[
+        local sound
+        local soundId = ]]..soundId..[[
+        pcall(function()
+            if not playSounds[soundId] then
+                playSounds[soundId] = {}
+            end
+            sound = audio.loadSound(']] .. obj_path .. [[/sound_'..soundId..'.mp3', system.DocumentsDirectory)
+            local channel = audio.play(sound)
+            table.insert(playSounds[ ]] .. soundId .. [[ ], {sound = sound, channel = channel})
+        end)
+            ]]
+        return lua
+    end,
+
+    playSoundIdAndWait = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
+        local soundId = make_all_formulas(infoBlock[2][1], object)
+        local lua = [[
+        local sound
+        local soundId = ]]..soundId..[[
+        pcall(function()
+            if not playSounds[soundId] then
+                playSounds[soundId] = {}
+            end
+            sound = audio.loadSound(']] .. obj_path .. [[/sound_'..soundId..'.mp3', system.DocumentsDirectory)
+            local channel = audio.play(sound)
+            table.insert(playSounds[ ]] .. soundId .. [[ ], {sound = sound, channel = channel})
+        end)
+        local time = audio.getDuration(sound)
+        threadFun.wait(time)
+            ]]
+        return lua
+    end,
+
+    setVolumeSoundSpecific = function(infoBlock, object, images, sounds, make_all_formulas)
+        local soundId = infoBlock[2][1][2]
+        
+        local lua = [[
+        pcall(function()
+            local sound = playSounds[ ]]..soundId..[[ ]
+            if sound then
+                local volume = ]]..make_all_formulas(infoBlock[2][2], object).."\n"..[[ 
+                audio.setVolume(volume/100, {channel = sound.channel})
+            else
+                print("Failed to set id "..tostring(]]..soundId..[[).." volume: not loaded yet")
+            end
+        end)
+        ]]
+
+        return lua
+    end,
+
+    setVolumeSoundIdSpecific = function(infoBlock, object, images, sounds, make_all_formulas)
+        local soundId = make_all_formulas(infoBlock[2][1], object)
+
+        local lua = [[
+        pcall(function()
+            local sound = playSounds[ ]]..soundId..[[ ]
+            if sound then
+                local volume = ]]..make_all_formulas(infoBlock[2][2], object).."\n"..[[ 
+                audio.setVolume(volume/100, {channel = sound.channel})
+            else
+                print("Failed to set id "..tostring(]]..soundId..[[).." volume: not loaded yet")
+            end
+        end)
+        ]]
+
+        print(lua)
+
+        return lua
+    end
 }

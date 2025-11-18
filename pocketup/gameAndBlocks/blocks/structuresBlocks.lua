@@ -323,6 +323,12 @@ allBlocks = {
 	["setTapDelay"]={"block", "blocks/block_gold_2.png", { {{"text", app.words[677]}}, {{"cell", nil, 5}}}, 109, 142, false},
 	["deleteAllClones"]={"block","blocks/block_orange_2.png",{ {{"text",app.words[678]}},{{"objects",nil}} }, 109,142, false},
 	["drawMode"]={"block", "blocks/block_orange_2.png", { {{"text", app.words[679]}}, {{"onOrOff"}}}, 109, 142, false},
+	["changeLayer"] = {"block", "blocks/block_blue_2.png", { {{"text", app.words[681]}, {"cell", nil, 3}} }, 109, 142, false},
+	["playSoundId"] = {"block", "blocks/block_violet_2.png", { {{"text", app.words[682]}}, {{"cell", nil, 3}} }, 109, 142, false},
+	["playSoundIdAndWait"] = {"block", "blocks/block_violet_3.png", { {{"text", app.words[682]}}, {{"cell", nil, 3}}, {{"text", app.words[191]}} }, 109, 188, false},
+	["setVolumeSoundSpecific"] = {"block", "blocks/block_violet_2.png", { {{"text", app.words[683]}}, {{"sounds", nil, 4}}, {{"text", app.words[684]}, {"cell", nil, 3}, {"text", "%"}} }, 109, 142, false},
+	["setVolumeSoundIdSpecific"] = {"block", "blocks/block_violet_3.png", { {{"text", app.words[685]}}, {{"cell", nil, 8}}, {{"text", app.words[684]}, {"cell", nil, 3}, {"text", "%"}} }, 109, 188, false},
+	["setRotationDegPerSecond"] = {"block", "blocks/block_blue_2.png", { {{"text", app.words[686]}}, {{"cell", nil, 1}, {"text", app.words[687]}} }, 109, 142, false},
 }
 
 
