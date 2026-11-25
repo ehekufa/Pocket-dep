@@ -9,9 +9,9 @@ return {
                 lua = lua..'target.fill = {type = \'image\', filename = \''..app.idProject..'/scene_'..scene_id..'/object_'..obj_id..'/image_'..image..'.png\', baseDir = system.DocumentsDirectory}\n'
                 lua = lua.."target.origWidth, target.origHeight = getImageProperties(target.image_path, system.DocumentsDirectory)\ntarget.width, target.height = target.origWidth*(target.property_size/100), target.origHeight*(target.property_size/100)\n"
                 lua = lua.."local r = pocketupFuns.sin(target.property_color-22+56)/2+0.724\nlocal g = pocketupFuns.cos(target.property_color+56)/2+0.724\nlocal b = pocketupFuns.sin(target.property_color+22+56)/2+0.724\ntarget:setFillColor(r,g,b)\n"
-                lua = lua.."if (target.property_color~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
+                lua = lua.."if (target.property_brightness~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
                 if (o==1) then
-                    lua = lua.."broadcastChangeBackground(listImages[numberImage])\n"
+                    lua = lua.."broadcastChangeBackground(listImages[newIdImage])\n"
                 end
                 lua = lua.."end\n"
                 return lua.."\nend)"
@@ -28,7 +28,7 @@ return {
             lua = lua..'target.fill = {type = \'image\', filename = \''..app.idProject..'/scene_'..scene_id..'/object_'..obj_id..'/image_\'..listImages[numberImage]..\'.png\', baseDir = system.DocumentsDirectory}\n'
             lua = lua.."target.origWidth, target.origHeight = getImageProperties(target.image_path, system.DocumentsDirectory)\ntarget.width, target.height = target.origWidth*(target.property_size/100), target.origHeight*(target.property_size/100)\n"
             lua = lua.."local r = pocketupFuns.sin(target.property_color-22+56)/2+0.724\nlocal g = pocketupFuns.cos(target.property_color+56)/2+0.724\nlocal b = pocketupFuns.sin(target.property_color+22+56)/2+0.724\ntarget:setFillColor(r,g,b)\n"
-            lua = lua.."if (target.property_color~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
+            lua = lua.."if (target.property_brightness~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
             if (o==1) then
                 lua = lua.."broadcastChangeBackground(listImages[numberImage])\n"
             end
@@ -43,7 +43,7 @@ return {
             lua = lua..'target.fill = {type = \'image\', filename = \''..app.idProject..'/scene_'..scene_id..'/object_'..obj_id..'/image_\'..listImages[target.numberImage]..\'.png\', baseDir = system.DocumentsDirectory}\n'
             lua = lua.."target.origWidth, target.origHeight = getImageProperties(target.image_path, system.DocumentsDirectory)\ntarget.width, target.height = target.origWidth*(target.property_size/100), target.origHeight*(target.property_size/100)\n"
             lua = lua.."local r = pocketupFuns.sin(target.property_color-22+56)/2+0.724\nlocal g = pocketupFuns.cos(target.property_color+56)/2+0.724\nlocal b = pocketupFuns.sin(target.property_color+22+56)/2+0.724\ntarget:setFillColor(r,g,b)\n"
-            lua = lua.."if (target.property_color~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
+            lua = lua.."if (target.property_brightness~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
             return lua.."\nend)"
         end
     end,
@@ -55,7 +55,7 @@ return {
             lua = lua..'target.fill = {type = \'image\', filename = \''..app.idProject..'/scene_'..scene_id..'/object_'..obj_id..'/image_\'..listImages[target.numberImage]..\'.png\', baseDir = system.DocumentsDirectory}\n'
             lua = lua.."target.origWidth, target.origHeight = getImageProperties(target.image_path, system.DocumentsDirectory)\ntarget.width, target.height = target.origWidth*(target.property_size/100), target.origHeight*(target.property_size/100)\n"
             lua = lua.."local r = pocketupFuns.sin(target.property_color-22+56)/2+0.724\nlocal g = pocketupFuns.cos(target.property_color+56)/2+0.724\nlocal b = pocketupFuns.sin(target.property_color+22+56)/2+0.724\ntarget:setFillColor(r,g,b)\n"
-            lua = lua.."if (target.property_color~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
+            lua = lua.."if (target.property_brightness~=100) then\ntarget.fill.effect = 'filter.brightness'\ntarget.fill.effect.intensity = (target.property_brightness)/100-1\nend\n"
             return lua.."\nend)"
         end
     end,
@@ -165,7 +165,7 @@ return {
         local lua = "pcall(function()\n"
         local arg1 = make_all_formulas(infoBlock[2][1], object)
         local arg2 = make_all_formulas(infoBlock[2][2], object)
-        lua = lua..'if (target.think ~= nil) then\ndisplay.remove(target.think.carbon)\ndisplay.remove(target.think.text)\ndisplay.remove(target.think)\nend\ntarget.think = display.newRoundedRect(0, 0, 200, 200, 15)\ntarget.group:insert(target.think)\ntarget.think.carbon = display.newImage("sprites/says.png", CENTER_X, CENTER_Y)\ntarget.group:insert(target.think.carbon)\ntarget.think.carbon:scale(0.17, 0.17)\ntarget.think.text = display.newText('..arg1..', 0, 0, 190, 190, native.systemFont, 25)\ntarget.group:insert(target.think.text)\ntarget.think.text:setFillColor(0)\n\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+15\nlocal _mover = timer.performWithDelay(0, function()\nif (target.think~=nil and target.think.x ~=nil) then\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+15\nend\nend, -1)\ntimer.performWithDelay('..arg2..'*1000, function()\nif (target.think~=nil and target.think.x ~=nil) then\ntimer.cancel(_mover) target.think:removeSelf() target.think.text:removeSelf() target.think.carbon:removeSelf() \nelse\ntimer.cancel(_mover)\nend\nend)'
+        lua = lua..'if target._thinkMoveTimer then timer.cancel(target._thinkMoveTimer); target._thinkMoveTimer = nil end\nif target._thinkHideTimer then timer.cancel(target._thinkHideTimer); target._thinkHideTimer = nil end\nif (target.think ~= nil) then\ndisplay.remove(target.think.carbon)\ndisplay.remove(target.think.text)\ndisplay.remove(target.think)\ntarget.think = nil\nend\ntarget.think = display.newRoundedRect(0, 0, 200, 200, 15)\ntarget.group:insert(target.think)\ntarget.think.carbon = display.newImage("sprites/says.png")\ntarget.group:insert(target.think.carbon)\ntarget.think.carbon:scale(0.17, 0.17)\ntarget.think.text = display.newText('..arg1..', 0, 0, 190, 190, native.systemFont, 25)\ntarget.group:insert(target.think.text)\ntarget.think.text:setFillColor(0)\n\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+15\ntarget._thinkMoveTimer = timer.performWithDelay(0, function()\nif (target and target.x and target.think~=nil and target.think.x ~=nil) then\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+15\nelseif target and target._thinkMoveTimer then\ntimer.cancel(target._thinkMoveTimer)\ntarget._thinkMoveTimer = nil\nend\nend, 0)\ntarget._thinkHideTimer = timer.performWithDelay(math.max(0, ('..arg2..')*1000), function()\nif target._thinkMoveTimer then timer.cancel(target._thinkMoveTimer); target._thinkMoveTimer = nil end\ntarget._thinkHideTimer = nil\nif (target and target.think~=nil) then\ndisplay.remove(target.think.text)\ndisplay.remove(target.think.carbon)\ndisplay.remove(target.think)\ntarget.think = nil\nend\nend)'
         return lua.."\nend)"
     end,
 
@@ -173,7 +173,7 @@ return {
         local lua = "pcall(function()\n"
         local arg1 = make_all_formulas(infoBlock[2][1], object)
         local arg2 = make_all_formulas(infoBlock[2][2], object)
-        lua = lua..'if (target.think ~= nil) then\ndisplay.remove(target.think.carbon)\ndisplay.remove(target.think.text)\ndisplay.remove(target.think)\nend\ntarget.think = display.newRoundedRect(0, 0, 200, 200, 15)\ntarget.group:insert(target.think)\ntarget.think.carbon = display.newImage("sprites/thinks.png", CENTER_X, CENTER_Y)\ntarget.group:insert(target.think.carbon)\ntarget.think.carbon:scale(0.17, 0.17)\ntarget.think.text = display.newText('..arg1..', 0, 0, 190, 190, native.systemFont, 25)\ntarget.group:insert(target.think.text)\ntarget.think.text:setFillColor(0)\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+20\nlocal _mover = timer.performWithDelay(0, function()\nif (target.think~=nil and target.think.x ~=nil) then\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+20\nend\nend, -1)\ntimer.performWithDelay('..arg2..'*1000, function()\nif (target.think~=nil and target.think.x ~=nil) then\ntimer.cancel(_mover) target.think:removeSelf() target.think.text:removeSelf() target.think.carbon:removeSelf() \nelse\ntimer.cancel(_mover)\nend\nend)'
+        lua = lua..'if target._thinkMoveTimer then timer.cancel(target._thinkMoveTimer); target._thinkMoveTimer = nil end\nif target._thinkHideTimer then timer.cancel(target._thinkHideTimer); target._thinkHideTimer = nil end\nif (target.think ~= nil) then\ndisplay.remove(target.think.carbon)\ndisplay.remove(target.think.text)\ndisplay.remove(target.think)\ntarget.think = nil\nend\ntarget.think = display.newRoundedRect(0, 0, 200, 200, 15)\ntarget.group:insert(target.think)\ntarget.think.carbon = display.newImage("sprites/thinks.png")\ntarget.group:insert(target.think.carbon)\ntarget.think.carbon:scale(0.17, 0.17)\ntarget.think.text = display.newText('..arg1..', 0, 0, 190, 190, native.systemFont, 25)\ntarget.group:insert(target.think.text)\ntarget.think.text:setFillColor(0)\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+20\ntarget._thinkMoveTimer = timer.performWithDelay(0, function()\nif (target and target.x and target.think~=nil and target.think.x ~=nil) then\ntarget.think.x = target.x + (target.width/2) + 100 target.think.y = target.y - target.width/2 - 100 target.think.text.x = target.think.x+10 target.think.text.y = target.think.y+10 \ntarget.think.carbon.x = target.think.x - target.think.width/2+23\ntarget.think.carbon.y = target.think.y + target.think.height/2+20\nelseif target and target._thinkMoveTimer then\ntimer.cancel(target._thinkMoveTimer)\ntarget._thinkMoveTimer = nil\nend\nend, 0)\ntarget._thinkHideTimer = timer.performWithDelay(math.max(0, ('..arg2..')*1000), function()\nif target._thinkMoveTimer then timer.cancel(target._thinkMoveTimer); target._thinkMoveTimer = nil end\ntarget._thinkHideTimer = nil\nif (target and target.think~=nil) then\ndisplay.remove(target.think.text)\ndisplay.remove(target.think.carbon)\ndisplay.remove(target.think)\ntarget.think = nil\nend\nend)'
         return lua.."\nend)"
     end,
 
@@ -224,7 +224,7 @@ return {
 
     focusCameraToObject = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o)
         local lua = "pcall(function()\n"
-        lua = lua.."if (focusCameraObject == nil) then\nfocusCameraObject = target\ntarget.timerCamera = timer.new(0, function()\ncameraGroup.x, cameraGroup.y = -focusCameraObject.x + math.max(math.min(focusCameraObject.x+cameraGroup.x,"..tostring(options.displayWidth/2).."/100*"..make_all_formulas(infoBlock[2][1], object).."),-"..tostring(options.displayWidth/2).."/100*"..make_all_formulas(infoBlock[2][1], object).."), -focusCameraObject.y + math.max(math.min(focusCameraObject.y+cameraGroup.y,"..tostring(options.displayHeight/2).."/100*"..make_all_formulas(infoBlock[2][2], object).."),-"..tostring(options.displayHeight/2).."/100*"..make_all_formulas(infoBlock[2][2], object)..") \nend, 0)\nelse\nfocusCameraObject = target\nend"
+        lua = lua.."if (cameraFocusTimer == nil) then\nfocusCameraObject = target\ncameraFocusTimer = timer.new(0, function()\nif focusCameraObject and focusCameraObject.x and cameraGroup and cameraGroup.x then\ncameraGroup.x, cameraGroup.y = -focusCameraObject.x + math.max(math.min(focusCameraObject.x+cameraGroup.x,"..tostring(options.displayWidth/2).."/100*"..make_all_formulas(infoBlock[2][1], object).."),-"..tostring(options.displayWidth/2).."/100*"..make_all_formulas(infoBlock[2][1], object).."), -focusCameraObject.y + math.max(math.min(focusCameraObject.y+cameraGroup.y,"..tostring(options.displayHeight/2).."/100*"..make_all_formulas(infoBlock[2][2], object).."),-"..tostring(options.displayHeight/2).."/100*"..make_all_formulas(infoBlock[2][2], object)..")\nend\nend, 0)\nelse\nfocusCameraObject = target\nend"
         return lua.."\nend)"    
     end,
 
@@ -242,7 +242,7 @@ return {
 
     removeFocusCameraToObject = function (infoBlock, object, images, sounds, make_all_formulas)
         local lua = "pcall(function()\n"
-        lua = lua.."if (focusCameraObject~=nil) then\ntimer.cancel(focusCameraObject.timerCamera)\nfocusCameraObject = nil\nend"
+        lua = lua.."if cameraFocusTimer then\ntimer.cancel(cameraFocusTimer)\ncameraFocusTimer = nil\nend\nfocusCameraObject = nil"
         return lua.."\nend)"
     end,
 
@@ -257,9 +257,9 @@ return {
                 lua = lua..'background.fill = {type = \'image\', filename = background.image_path, baseDir = system.DocumentsDirectory}\n'
                 lua = lua.."background.origWidth, background.origHeight = getImageProperties(background.image_path, system.DocumentsDirectory)\nbackground.width, background.height = background.origWidth*(background.property_size/100), background.origHeight*(background.property_size/100)\n"
                 lua = lua.."local r = pocketupFuns.sin(background.property_color-22+56)/2+0.724\nlocal g = pocketupFuns.cos(background.property_color+56)/2+0.724\nlocal b = pocketupFuns.sin(background.property_color+22+56)/2+0.724\nbackground:setFillColor(r,g,b)\n"
-                lua = lua.."if (background.property_color~=100) then\nbackground.fill.effect = 'filter.brightness'\nbackground.fill.effect.intensity = (background.property_brightness)/100-1\nend\n"
+                lua = lua.."if (background.property_brightness~=100) then\nbackground.fill.effect = 'filter.brightness'\nbackground.fill.effect.intensity = (background.property_brightness)/100-1\nend\n"
                 if (o==1) then
-                    lua = lua.."broadcastChangeBackground(listImages[numberImage])\n"
+                    lua = lua.."broadcastChangeBackground(background.listImagesBack[newIdImage])\n"
                 end
                 lua = lua.."end\n"
                 return lua.."\nend)"
@@ -276,9 +276,9 @@ return {
             lua = lua..'background.fill = {type = \'image\', filename = background.image_path, baseDir = system.DocumentsDirectory}\n'
             lua = lua.."background.origWidth, background.origHeight = getImageProperties(background.image_path, system.DocumentsDirectory)\nbackground.width, background.height = background.origWidth*(background.property_size/100), background.origHeight*(background.property_size/100)\n"
             lua = lua.."local r = pocketupFuns.sin(background.property_color-22+56)/2+0.724\nlocal g = pocketupFuns.cos(background.property_color+56)/2+0.724\nlocal b = pocketupFuns.sin(background.property_color+22+56)/2+0.724\nbackground:setFillColor(r,g,b)\n"
-            lua = lua.."if (background.property_color~=100) then\nbackground.fill.effect = 'filter.brightness'\nbackground.fill.effect.intensity = (background.property_brightness)/100-1\nend\n"
+            lua = lua.."if (background.property_brightness~=100) then\nbackground.fill.effect = 'filter.brightness'\nbackground.fill.effect.intensity = (background.property_brightness)/100-1\nend\n"
             if (o==1) then
-                lua = lua.."broadcastChangeBackground(listImages[numberImage])\n"
+                lua = lua.."broadcastChangeBackground(background.listImagesBack[numberImage])\n"
             end
             return lua.."\nend)"
         end

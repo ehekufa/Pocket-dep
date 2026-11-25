@@ -41,7 +41,7 @@ local OS_COPY = function(link, link2)
 end
 
 if IS_SIM or IS_WIN then
-    FILEPICKER = require 'plugin.tinyfiledialogs'
+    local FILEPICKER = require 'plugin.tinyfiledialogs'
 
 
     M = {}
@@ -50,7 +50,8 @@ if IS_SIM or IS_WIN then
         or mime == 'audio/*' and {'*.wav', '*.mp3', '*.ogg'} or mime == 'ccode/*' and {'*.ccode', '*.zip'}
         or mime == 'text/x-lua' and {'*.lua', '*.txt'} or mime == 'video/*' and {'*.mov', '*.mp4', '*.m4v', '*.3gp'} or nil
         local pathToFile , path = path , FILEPICKER.openFileDialog({filter_patterns = filter_patterns})
-        if path then OS_COPY(path, pathToFile) end listener({isError = path and false or true, done = path and 'ok' or 'error', origFileName = path})
+        if path then OS_COPY(path, pathToFile) end
+        if listener then listener({isError = path and false or true, done = path and 'ok' or 'error', origFileName = path}) end
     end
 end
 

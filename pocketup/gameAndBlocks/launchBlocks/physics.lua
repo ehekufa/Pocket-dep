@@ -124,14 +124,14 @@ return {
     vibration = function (infoBlock, object, images, sounds, make_all_formulas)
         local lua = "pcall(function()\n"
         local time = make_all_formulas(infoBlock[2][1], object)
-        lua = lua.."timer.new(100,function() system.vibrate('impact') end , ("..time.."*1000)/100)"
+        lua = lua.."local _vibReps = math.floor(("..time..") * 10)\nif _vibReps > 0 then timer.new(100, function() system.vibrate('impact') end, _vibReps) end"
         return lua .. "\nend)"
     end,
 
     addBody = function (infoBlock, object, images, sounds, make_all_formulas)
         local lua = "pcall(function()\n"
         if (infoBlock[2][1][2]~="noPhysic") then
-            lua = lua..'target.physicsTable = {outline = graphics.newOutline(10, target.image_path, system.DocumentsDirectory), density=3, friction=0.3, bounce=0.3}\ntarget.physicsType = \''..infoBlock[2][1][2]..'\'\n'
+            lua = lua..'local _oKey = target.image_path and ("10:"..target.image_path) or nil\nlocal _outline = _oKey and _outlineCache[_oKey] or nil\nif not _outline and target.image_path then\n_outline = graphics.newOutline(10, target.image_path, system.DocumentsDirectory)\n_outlineCache[_oKey] = _outline\nend\ntarget.physicsTable = {outline = _outline, density=3, friction=0.3, bounce=0.3}\ntarget.physicsType = \''..infoBlock[2][1][2]..'\'\n'
             lua = lua..'target.physicsReload = function(target)\
             local oldTypeRotation = target.isFixedRotation\
             plugins.physics.removeBody(target)\n'
@@ -139,9 +139,9 @@ return {
             target.isFixedRotation = oldTypeRotation\
             end"
             lua = lua..'\ntarget:physicsReload()'
-            lua = lua.."\ntarget:addEventListener('collision', function(event)\nif (event.phase=='began') then\nevent.target.touchesObjects['obj_'..event.other.parent_obj.idObject] = true\ntimer.new(0, function()\nfor i=1, #events_collision do\nevents_collision[i](event.target, event.other.parent_obj.nameObject)\nend\nend)\nelseif (event.phase=='ended') then\nevent.target.touchesObjects['obj_'..event.other.parent_obj.idObject] = nil\ntimer.new(0, function()\nfor i=1, #events_endedCollision do\nevents_endedCollision[i](event.target, event.other.parent_obj.nameObject)\nend\nend)\nend\nend)"
+            lua = lua.."\nif target._collisionListener then target:removeEventListener('collision', target._collisionListener) end\ntarget._collisionListener = function(event)\nif not (event.target and event.target.touchesObjects and event.other and event.other.parent_obj) then return end\nif (event.phase=='began') then\nevent.target.touchesObjects['obj_'..event.other.parent_obj.idObject] = true\ntimer.new(0, function()\nif event.target and event.target.x and event.other and event.other.parent_obj then\nfor i=1, #events_collision do\nevents_collision[i](event.target, event.other.parent_obj.nameObject)\nend\nend\nend)\nelseif (event.phase=='ended') then\nevent.target.touchesObjects['obj_'..event.other.parent_obj.idObject] = nil\ntimer.new(0, function()\nif event.target and event.target.x and event.other and event.other.parent_obj then\nfor i=1, #events_endedCollision do\nevents_endedCollision[i](event.target, event.other.parent_obj.nameObject)\nend\nend\nend)\nend\nend\ntarget:addEventListener('collision', target._collisionListener)"
         else
-            lua = lua.."plugins.physics.removeBody(target)\ntarget.physicsReload = nil\ntarget.touchesObjects = {}"
+            lua = lua.."if target._collisionListener then target:removeEventListener('collision', target._collisionListener); target._collisionListener = nil end\nplugins.physics.removeBody(target)\ntarget.physicsReload = nil\ntarget.touchesObjects = {}"
         end
         return lua .. "\nend)"
     end,
@@ -214,7 +214,7 @@ return {
     setTextelCoarseness = function (infoBlock, object, images, sounds, make_all_formulas)
         local lua = "pcall(function()\n"
         local arg1 = make_all_formulas(infoBlock[2][1], object)
-        lua = lua.."target.physicsTable.outline = graphics.newOutline("..arg1..", target.image_path, system.DocumentsDirectory)\ntarget:physicsReload()\n"
+        lua = lua.."local _coarseness = "..arg1.."\nlocal _oKey = target.image_path and (tostring(_coarseness)..':'..target.image_path) or nil\nlocal _outline = _oKey and _outlineCache[_oKey] or nil\nif not _outline and target.image_path then\n_outline = graphics.newOutline(_coarseness, target.image_path, system.DocumentsDirectory)\n_outlineCache[_oKey] = _outline\nend\ntarget.physicsTable.outline = _outline\ntarget:physicsReload()\n"
         return lua .. "\nend)"
     end,
 
@@ -244,7 +244,7 @@ return {
 
     setGravityScale = function (infoBlock, object, images, sounds, make_all_formulas)
         local lua = "pcall(function()\n"
-        lua = lua.."local v = "..make_all_formulas(infoBlock[2][1], object).."\ntarget.gravityScale = tonumber(v, 0)"
+        lua = lua.."local v = "..make_all_formulas(infoBlock[2][1], object).."\ntarget.gravityScale = tonumber(v) or 1"
         return lua .. "\nend)"
     end,
 
@@ -276,10 +276,8 @@ return {
 
         local formula = make_all_formulas(infoBlock[2][1], object)
         
-        lua = lua .. "local newIndex = oldIndex + (" .. formula .. ")\n"
+        lua = lua .. "local newIndex = math.max(1, math.min(g.numChildren, oldIndex + (" .. formula .. ")))\n"
         lua = lua .. "g:insert(newIndex, target)\n"
-        
-        lua = lua .. "print(\"Layer changed from \"..oldIndex..\" to \"..newIndex)\n"
         
         return lua
     end,

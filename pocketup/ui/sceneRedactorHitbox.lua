@@ -45,10 +45,22 @@ function scene_redactorShapeHitbox(arrayShape, textParameter, images, blocks)
 	groupScene:insert(rectRightGradient)
 
 	local tablePositions = plugins.json.decode(arrayShape[2])
+	local timerScrollImages = nil
+	local timerInitTextFields = nil
 
 	funBackObjects[1] = function()
 		if (isBackScene == "back") then
+			if timerScrollImages then
+				timer.cancel(timerScrollImages)
+				timerScrollImages = nil
+			end
+			if timerInitTextFields then
+				timer.cancel(timerInitTextFields)
+				timerInitTextFields = nil
+			end
+			native.setKeyboardFocus(nil)
 			plugins.physics.setDrawMode('normal')
+			plugins.physics.stop()
 			funBack = oldFunBack
 			display.remove(groupScene)
 			arrayShape[2] = plugins.json.encode(tablePositions)
@@ -175,8 +187,11 @@ function scene_redactorShapeHitbox(arrayShape, textParameter, images, blocks)
 	local scrollImagesWidth = math.max(tableImages[#images].x+size/1.25-(size-size/1.1)/2, scrollImages.width)
 	scrollImages:setScrollWidth(scrollImagesWidth)
 	if (scrollImagesWidth > scrollImages.width) then
-		timer.performWithDelay(500, function()
-			scrollImages:scrollToPosition({x=-size*1.5, time=500, transition=easing.inOutQuad})
+		timerScrollImages = timer.performWithDelay(500, function()
+			timerScrollImages = nil
+			if scrollImages and scrollImages.x then
+				scrollImages:scrollToPosition({x=-size*1.5, time=500, transition=easing.inOutQuad})
+			end
 		end)
 	end
 
@@ -397,11 +412,14 @@ function scene_redactorShapeHitbox(arrayShape, textParameter, images, blocks)
 	line.anchorX = 1
 	line:setFillColor(171/255, 219/255, 241/255)
 	groupInterface:insert(line)
-	timer.performWithDelay(0, function()
-		textFieldXPos.x = CENTER_X-display.contentWidth/50
-		textFieldYPos.x = CENTER_X+display.contentWidth/3
-		textFieldXPos.text = "0"
-		textFieldYPos.text = "0"
+	timerInitTextFields = timer.performWithDelay(0, function()
+		timerInitTextFields = nil
+		if textFieldXPos and textFieldXPos.x then
+			textFieldXPos.x = CENTER_X-display.contentWidth/50
+			textFieldYPos.x = CENTER_X+display.contentWidth/3
+			textFieldXPos.text = "0"
+			textFieldYPos.text = "0"
+		end
 	end)
 	local headerX = display.newText(app.words[59]..":", CENTER_X-display.contentWidth/50-textFieldXPos.width-display.contentWidth/40, textFieldXPos.y-textFieldXPos.height/2, nil, app.fontSize0)
 	headerX.anchorX = 1

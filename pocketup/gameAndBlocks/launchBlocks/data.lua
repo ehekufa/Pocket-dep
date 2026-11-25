@@ -25,13 +25,15 @@ return {
             local value = make_all_formulas(infoBlock[2][2], object)
             local lua = "pcall(function()\n"
             if infoBlock[2][1][1] == 'globalVariable' then
-                lua = lua..'var_'..infoBlock[2][1][2]..' = type(var_'..infoBlock[2][1][2]..')=="boolean" and (var_'..infoBlock[2][1][2]..' and app.words[373] or app.words[374]) or type(var_'..infoBlock[2][1][2]..')=="table" and encodeList(var_'..infoBlock[2][1][2]..') or var_'..infoBlock[2][1][2]..'+('..make_all_formulas(infoBlock[2][2], object)..')\n'
+                local vName = 'var_'..infoBlock[2][1][2]
+                local tName = 'varText_'..infoBlock[2][1][2]
+                lua = lua..vName..' = (tonumber('..vName..') or 0) + ('..value..')\n'
                 lua = lua..
-                'if varText_'..infoBlock[2][1][2]..' then\
-                varText_'..infoBlock[2][1][2]..'.text = var_'..infoBlock[2][1][2]..'\
+                'if '..tName..' then\
+                '..tName..'.text = type('..vName..')=="boolean" and ('..vName..' and app.words[373] or app.words[374]) or type('..vName..')=="table" and encodeList('..vName..') or '..vName..'\
                 end'
             else
-                lua = lua..'target.var_'..infoBlock[2][1][2]..' = target.var_'..infoBlock[2][1][2]..' + '..value..'\n'
+                lua = lua..'target.var_'..infoBlock[2][1][2]..' = (tonumber(target.var_'..infoBlock[2][1][2]..') or 0) + ('..value..')\n'
                 lua = lua..
                 'if target.varText_'..infoBlock[2][1][2]..' then\
                 target.varText_'..infoBlock[2][1][2]..'.text = type(target.var_'..infoBlock[2][1][2]..')=="boolean" and (target.var_'..infoBlock[2][1][2]..' and app.words[373] or app.words[374]) or type(target.var_'..infoBlock[2][1][2]..')=="table" and encodeList(target.var_'..infoBlock[2][1][2]..') or target.var_'..infoBlock[2][1][2]..'\

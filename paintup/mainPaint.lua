@@ -6,7 +6,7 @@ function scene_paint( orientation, pathImage )
 	display.setDefault("background", 211/255, 211/255, 211/255)
 	local groupScene = display.newGroup()
 	local groupSceneScroll = display.newGroup()
-	app.scene = "projects"
+	app.scene = "paint"
 	app.scenes[app.scene] = {groupSceneScroll, groupScene}
 	local funMenuObjects={}
 	local funCheckObjects = {}
@@ -19,6 +19,14 @@ function scene_paint( orientation, pathImage )
 	topBarArray[3].isVisible = false
 	topBarArray[4].alpha = 0.75
 	display.remove(topBarArray[5])
+
+	funBackObjects[1] = function()
+		native.setKeyboardFocus(nil)
+		display.setDefault("background", 4/255, 34/255, 44/255)
+		display.remove(groupSceneScroll)
+		display.remove(groupScene)
+		scene_menu()
+	end
 
 	local textFieldSizeBrush
 	local rectBackScrollSizeBrush
@@ -38,17 +46,19 @@ function scene_paint( orientation, pathImage )
 	textFieldSizeBrush.inputType = "number"
 	textFieldSizeBrush.align = "center"
 	textFieldSizeBrush:addEventListener("userInput", function(event)
-		if (textFieldSizeBrush.text~="" and tonumber(textFieldSizeBrush.text)>100) then
-			textFieldSizeBrush.text = event.oldText
+		local num = tonumber(textFieldSizeBrush.text)
+		if (textFieldSizeBrush.text~="" and (num == nil or num > 100)) then
+			textFieldSizeBrush.text = event.oldText or ""
 		elseif (textFieldSizeBrush.text:gsub("0", "")=="") then
 			textFieldSizeBrush.text = ""
 		end
 		if (event.phase=="editing") then
-			if (textFieldSizeBrush.text == "") then
+			local val = tonumber(textFieldSizeBrush.text)
+			if (textFieldSizeBrush.text == "" or val == nil) then
 				circleScrollSizeBrush.x = rectBackScrollSizeBrush.x
 				rectScrollSizeBrush.width = 0
 			else
-				circleScrollSizeBrush.x = rectBackScrollSizeBrush.x+rectBackScrollSizeBrush.width/100*textFieldSizeBrush.text
+				circleScrollSizeBrush.x = rectBackScrollSizeBrush.x+rectBackScrollSizeBrush.width/100*val
 				rectScrollSizeBrush.width = circleScrollSizeBrush.x - rectBackScrollSizeBrush.x
 			end
 		end
@@ -68,7 +78,7 @@ function scene_paint( orientation, pathImage )
 	rectScrollSizeBrush = display.newRect(groupScene, rectBackScrollSizeBrush.x, rectBackScrollSizeBrush.y, circleScrollSizeBrush.x - rectBackScrollSizeBrush.x, rectBackScrollSizeBrush.height)
 	rectScrollSizeBrush.anchorX = 0
 	rectScrollSizeBrush:setFillColor(21/255, 125/255, 162/255)
-	local buttonScrollSizeBrush = display.newImage("images/notVisible.png", rectBackScrollSizeBrush.x, rectBackScrollSizeBrush.y)
+	local buttonScrollSizeBrush = display.newImage(groupScene, "images/notVisible.png", rectBackScrollSizeBrush.x, rectBackScrollSizeBrush.y)
 	buttonScrollSizeBrush.anchorX = 0
 	buttonScrollSizeBrush.width, buttonScrollSizeBrush.height = rectBackScrollSizeBrush.width, textFieldSizeBrush.height
 	buttonScrollSizeBrush:addEventListener("touch", function(event)
@@ -85,7 +95,7 @@ function scene_paint( orientation, pathImage )
 		return(true)
 	end)
 
-	local rectDownBar = display.newRect(CENTER_X, CENTER_Y+display.contentHeight/2, topBarArray[1].width, topBarArray[1].height+50)
+	local rectDownBar = display.newRect(groupScene, CENTER_X, CENTER_Y+display.contentHeight/2, topBarArray[1].width, topBarArray[1].height+50)
 	rectDownBar.anchorY = 1
 	rectDownBar:setFillColor(50/255, 139/255, 153/255)
 end

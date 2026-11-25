@@ -39,20 +39,21 @@ function scene_categoriesScripts(funAddBlock)
 
 	local categories = {{67,"used","orange"}, {68,"event","grown"},{69,"control","orange"}--[[,{614,"cycles","orange"}]],{70,"physic","blue"},{71,"sounds","violet"},{680, "videos", "violet"},{72,"images","green"},{427,"particles","green"},{73,"pen","darkgreen"},{74,"data","red"},{75,"device","gold"},{532,"textFields","green"},{531,"miniScenes","yellow"},{587, "elementInterface", "pink"}}
 
+	local sheetOptions = {
+		width=1,
+		height=142,
+		numFrames=109,
+	}
+	local animates = {{
+		name="stand",
+		start=109,
+		count=1,
+		time=0,
+		loopCount=1,
+	}}
+
 	for i=1, #categories do
-		local sheetOptions = {
-			width=1,
-			height=142,
-			numFrames=109,
-		}
-		local imageSheet = graphics.newImageSheet("blocks/block_"..categories[i][3].."_2.png", sheetOptions)
-		local animates = {{
-			name="stand",
-			start=109,
-			count=1,
-			time=0,
-			loopCount=1,
-		}}
+		local imageSheet = utils.getBlockImageSheet("blocks/block_"..categories[i][3].."_2.png", sheetOptions)
 
 		local sprite = display.newSprite(imageSheet, animates)
 		sprite.width, sprite.height = display.contentWidth, display.contentWidth/4/1.25
@@ -77,13 +78,15 @@ function scene_categoriesScripts(funAddBlock)
 				display.getCurrentStage():setFocus(event.target, event.id)
 			elseif (event.phase=="moved" and (math.abs(event.y-event.yStart)>20 or math.abs(event.x-event.xStart)>20)) then
 				scrollProjects:takeFocus(event)
-			elseif (event.phase~="moved") then
+			elseif (event.phase=="ended" or event.phase=="cancelled") then
 				display.getCurrentStage():setFocus(event.target, nil)
-				local myCategory = event.target.category
-				local myNameCategory = event.target.nameCategory
-				display.remove(app.scenes[app.scene][1])
-				display.remove(app.scenes[app.scene][2])
-				scene_categoryScripts(myCategory, myNameCategory, funAddBlock)
+				if (event.phase=="ended") then
+					local myCategory = event.target.category
+					local myNameCategory = event.target.nameCategory
+					display.remove(app.scenes[app.scene][1])
+					display.remove(app.scenes[app.scene][2])
+					scene_categoryScripts(myCategory, myNameCategory, funAddBlock)
+				end
 			end
 			return true
 		end)

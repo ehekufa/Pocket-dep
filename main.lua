@@ -1,4 +1,4 @@
-collectgarbage("setpause", 1000)
+collectgarbage("setpause", 250)
 collectgarbage("setstepmul", 200)
 IsBuild = nil
 native.setProperty("windowMode", "normal")
@@ -139,16 +139,33 @@ for i=1, #listFiles do
     require("pocketup.gameAndBlocks."..listFiles[i])
 end
 
--- интерфейс покет апа
-listFiles = {
-    "projects","objects","scenes","menuMain","mainScene","optionsProject",
-    "scripts","categoriesScripts","categoryScripts","redactorFormulas",
-    "redactorArrayFormulas", "spriteViewer", "readySprites","sceneRedactorHitbox",
-    "visualPosition","buildApk","userAgreement"
+-- интерфейс покет апа (ленивая загрузка тяжелых сцен при первом открытии)
+require("pocketup.ui.mainScene")
+
+local lazyScenes = {
+    { "scene_projects",           "pocketup.ui.projects" },
+    { "scene_objects",            "pocketup.ui.objects" },
+    { "scene_scenes",             "pocketup.ui.scenes" },
+    { "scene_menu",               "pocketup.ui.menuMain" },
+    { "scene_options",            "pocketup.ui.optionsProject" },
+    { "scene_scripts",            "pocketup.ui.scripts" },
+    { "scene_categoriesScripts",  "pocketup.ui.categoriesScripts" },
+    { "scene_categoryScripts",    "pocketup.ui.categoryScripts" },
+    { "scene_formula_editor",     "pocketup.ui.redactorFormulas" },
+    { "scene_arrayFormulas",      "pocketup.ui.redactorArrayFormulas" },
+    { "scene_viewsprite",         "pocketup.ui.spriteViewer" },
+    { "scene_readySprites",       "pocketup.ui.readySprites" },
+    { "scene_redactorShapeHitbox","pocketup.ui.sceneRedactorHitbox" },
+    { "scene_setPosVisual",       "pocketup.ui.visualPosition" },
+    { "scene_optionsApk",         "pocketup.ui.buildApk" },
+    { "scene_userAgreement",      "pocketup.ui.userAgreement" },
+    { "scene_paint",              "paintup.mainPaint" },
 }
--- if IsBuild then
---     listFiles = {"projects", "mainScene"}
--- end
-for i=1, #listFiles do
-    require("pocketup.ui."..listFiles[i])
+for i = 1, #lazyScenes do
+    local fnName = lazyScenes[i][1]
+    local modulePath = lazyScenes[i][2]
+    _G[fnName] = function(...)
+        require(modulePath)
+        return _G[fnName](...)
+    end
 end

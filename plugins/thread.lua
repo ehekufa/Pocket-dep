@@ -3,15 +3,28 @@ m.timers = {}
 
 local timer = require('timer')
 m.timer = timer
-timer.allowInteratonsWithinFrame = true
+timer.allowIterationsWithinFrame = true
+
+local function removeTimerFromList(t)
+    if not t then return end
+    for i = #m.timers, 1, -1 do
+        if m.timers[i] == t then
+            table.remove(m.timers, i)
+            break
+        end
+    end
+end
 
 m.cancelAll = function ()
     timer.cancelAll()
+    m.timers = {}
 end
 
 m.cancel = function (t)
-    timer.cancel(t)
-    t = nil
+    if t then
+        pcall(timer.cancel, t)
+        removeTimerFromList(t)
+    end
 end
 
 m.start = function (p, object)
@@ -21,10 +34,10 @@ m.start = function (p, object)
         if object and object.x then
             local s, e = coroutine.resume(p)
             if (not s) or e then
-                timer.cancel(t)
+                m.cancel(t)
             end
         else
-            timer.cancel(t)
+            m.cancel(t)
         end
     end
     t = timer.performWithDelay(0, listener, 0)

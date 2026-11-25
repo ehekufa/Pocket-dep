@@ -11,9 +11,14 @@ local function decodeString(encoded)
 end
 
 local function onBack()
-    display.remove(objs.sceneGroup)
     objs.gen = false
-    if app.scene == "scripts" then
+    if objs.listReqId then
+        network.cancel(objs.listReqId)
+        objs.listReqId = nil
+    end
+    display.remove(objs.sceneGroup)
+    objs.sceneGroup = nil
+    if app.scene == "scripts" and app.scenes["scripts"] and app.scenes["scripts"][1] then
         app.scenes["scripts"][1].alpha = 1
     end
     funBack = objs.oldFunBack
@@ -51,115 +56,129 @@ function scene_readySprites( funAddImage )
     headerLoad.alpha=0.75
     scroll:insert(headerLoad)
 
-    local y = display.contentWidth/6
-    local link = decodeString({104, 116, 116, 112, 115, 58, 47, 47, 112, 111, 99, 107, 101, 116, 45, 117, 112, 45, 115, 116, 111, 114, 97, 103, 101, 45, 100, 101, 102, 97, 117, 108, 116, 45, 114, 116, 100, 98, 46, 101, 117, 114, 111, 112, 101, 45, 119, 101, 115, 116, 49, 46, 102, 105, 114, 101, 98, 97, 115, 101, 100, 97, 116, 97, 98, 97, 115, 101, 46, 97, 112, 112})
+    local link = decodeString({104, 116, 116, 112, 115, 58, 47, 47, 112, 111, 99, 107, 101, 116, 45, 117, 112, 45, 115, 116, 111, 114, 97, 103, 101, 45, 100, 101, 97, 117, 108, 116, 45, 114, 116, 100, 98, 46, 101, 117, 114, 111, 112, 101, 45, 119, 101, 115, 116, 49, 46, 102, 105, 114, 101, 98, 97, 115, 101, 100, 97, 116, 97, 98, 97, 115, 101, 46, 97, 112, 112})
+    -- preserve exact original decoded host string
+    link = decodeString({104, 116, 116, 112, 115, 58, 47, 47, 112, 111, 99, 107, 101, 116, 45, 117, 112, 45, 115, 116, 111, 114, 97, 103, 101, 45, 100, 101, 102, 97, 117, 108, 116, 45, 114, 116, 100, 98, 46, 101, 117, 114, 111, 112, 101, 45, 119, 101, 115, 116, 49, 46, 102, 105, 114, 101, 98, 97, 115, 101, 100, 97, 116, 97, 98, 97, 115, 101, 46, 97, 112, 112})
 
-    network.request( link..'/sprites.json', "GET", function(event)
+    objs.listReqId = network.request( link..'/sprites.json', "GET", function(event)
+        objs.listReqId = nil
+        if not objs.gen or sceneGroup.x == nil then
+            return
+        end
         if not event.isError then
-            -- загрузка листа готовых образов
             local sprites = plugins.json.decode(event.response)
+            if type(sprites) ~= "table" then
+                onBack()
+                app.cerberus.newBannerQuestion(app.words[550], nil, "", app.words[16])
+                return
+            end
             local spritesArray = {}
-            for i, v in pairs(sprites) do
-                spritesArray[#spritesArray+1] = {i, v}
+            for k, v in pairs(sprites) do
+                spritesArray[#spritesArray+1] = {k, v}
             end
             headerLoad.alpha = 0
-            
+
             local function loadList(startId, endId)
-                local y = display.contentWidth/6
+                local rowHeight = display.contentWidth/3
+                local baseY = display.contentWidth/6
                 if (groupSceneScroll~=nil) then
                     display.remove(groupSceneScroll)
                 end
                 local myGroup = display.newGroup()
                 groupSceneScroll = myGroup
                 scroll:insert(groupSceneScroll)
-                for i=startId, endId do
-                    if (spritesArray[i]~=nil) then
-                        local v = spritesArray[i][2]
-                        local i = spritesArray[i][1]
-                        ----
+
+                local itemCount = math.max(0, math.min(endId, #spritesArray) - startId + 1)
+                scroll:setScrollHeight(itemCount * rowHeight + display.contentWidth/1.5)
+
+                for idx=startId, endId do
+                    if (spritesArray[idx]~=nil and objs.gen) then
+                        local v = spritesArray[idx][2]
+                        local slotY = baseY + (idx - startId) * rowHeight
+                        local tmpFile = 'ready_sprite_'..tostring(idx)..'.png'
                         local params = {}
                         params.progress = true
-                        if objs.gen then
-                            network.download( v['link'], 'GET', function(event)
-                                if event.phase == 'ended' and sceneGroup~=nil and sceneGroup.x~=nil and myGroup~=nil and myGroup.x~=nil then
-                                    pcall(function()
-                                        local bg = display.newRect(CENTER_X, y, display.contentWidth, display.contentWidth/3)
-                                        bg:setFillColor(0, 71/255, 93/255)
-                                        groupSceneScroll:insert(bg)
-                                        bg.container = display.newContainer( display.contentWidth/4, display.contentWidth/4)
-                                        local obj = display.newImage(v['name']..'.png', system.TemporaryDirectory)
-                                        obj.link = v['link']
-                                        local obj_bg = display.newRect(20+bg.container.width/2, bg.y, bg.container.width, bg.container.height+5)
-                                        groupSceneScroll:insert(obj_bg)
-                                        obj:toFront()
-                                        local sizeIconProject = bg.container.height/obj.height
-                                        if (obj.width*sizeIconProject<bg.container.width) then
-                                            sizeIconProject = bg.container.width/obj.width
-                                        end
-                                        obj.xScale, obj.yScale = sizeIconProject, sizeIconProject
-                                        obj_bg.strokeWidth = 5
-                                        obj_bg:setFillColor(0, 71/255, 93/255)
-                                        obj_bg:setStrokeColor(171/255, 219/255, 1)
+                        network.download( v['link'], 'GET', function(dlEvent)
+                            if dlEvent.phase == 'ended' and not dlEvent.isError and objs.gen and sceneGroup.x~=nil and myGroup.x~=nil and groupSceneScroll == myGroup then
+                                pcall(function()
+                                    local bg = display.newRect(CENTER_X, slotY, display.contentWidth, rowHeight)
+                                    bg:setFillColor(0, 71/255, 93/255)
+                                    groupSceneScroll:insert(bg)
+                                    bg.container = display.newContainer( display.contentWidth/4, display.contentWidth/4)
+                                    local obj = display.newImage(tmpFile, system.TemporaryDirectory)
+                                    if not obj then
+                                        display.remove(bg.container)
+                                        display.remove(bg)
+                                        return
+                                    end
+                                    obj.link = v['link']
+                                    local obj_bg = display.newRect(20+bg.container.width/2, bg.y, bg.container.width, bg.container.height+5)
+                                    groupSceneScroll:insert(obj_bg)
+                                    obj:toFront()
+                                    local sizeIconProject = bg.container.height/obj.height
+                                    if (obj.width*sizeIconProject<bg.container.width) then
+                                        sizeIconProject = bg.container.width/obj.width
+                                    end
+                                    obj.xScale, obj.yScale = sizeIconProject, sizeIconProject
+                                    obj_bg.strokeWidth = 5
+                                    obj_bg:setFillColor(0, 71/255, 93/255)
+                                    obj_bg:setStrokeColor(171/255, 219/255, 1)
 
-                                        bg.container.x = obj_bg.x
-                                        bg.name = v['name']
-                                        bg.ref = obj
-                                        bg.link = v['link']
-                                        bg.container.y = bg.y
-                                        bg.container:insert(obj)
-                                        groupSceneScroll:insert(bg.container)
-                                        local name = display.newText({
-                                            text=v['name'],
-                                            x=0,
-                                            y=bg.y,
-                                            width=display.contentWidth-obj_bg.width-15,
-                                            --height=bg.height-50,
-                                            font=native.systemFont,
-                                            fontSize=app.fontSize1
-                                        })
-                                        name.x = obj_bg.x + obj_bg.width/2 + name.width/2 + 15
-                                        name:setFillColor(170/255,218/255,240/255)
+                                    bg.container.x = obj_bg.x
+                                    bg.name = v['name']
+                                    bg.ref = obj
+                                    bg.link = v['link']
+                                    bg.container.y = bg.y
+                                    bg.container:insert(obj)
+                                    groupSceneScroll:insert(bg.container)
+                                    local name = display.newText({
+                                        text=v['name'],
+                                        x=0,
+                                        y=bg.y,
+                                        width=display.contentWidth-obj_bg.width-15,
+                                        font=native.systemFont,
+                                        fontSize=app.fontSize1
+                                    })
+                                    name.x = obj_bg.x + obj_bg.width/2 + name.width/2 + 15
+                                    name:setFillColor(170/255,218/255,240/255)
 
-                                        groupSceneScroll:insert(name)
-                                        bg:addEventListener('touch', function(event)
-                                            if event.phase == 'began' then
-                                                event.target:setFillColor(24/255, 50/255, 60/255)
-                                                display.getCurrentStage():setFocus(event.target, event.id)
-                                            elseif event.phase == 'moved' and (math.abs(event.x-event.xStart)>20 or math.abs(event.y-event.yStart)>20) then
-                                                event.target:setFillColor(0, 71/255, 93/255)
-                                                objs.scroll:takeFocus(event)
-                                            elseif event.phase == 'ended' then
-                                                display.getCurrentStage():setFocus(event.target, nil)
-                                                event.target:setFillColor(0/255, 71/255, 93/255)
-                                                local sprites = plugins.json.decode(funsP['получить сохранение'](app.idObject..'/images'))
+                                    groupSceneScroll:insert(name)
+                                    bg:addEventListener('touch', function(touchEv)
+                                        if touchEv.phase == 'began' then
+                                            touchEv.target:setFillColor(24/255, 50/255, 60/255)
+                                            display.getCurrentStage():setFocus(touchEv.target, touchEv.id)
+                                        elseif touchEv.phase == 'moved' and (math.abs(touchEv.x-touchEv.xStart)>20 or math.abs(touchEv.y-touchEv.yStart)>20) then
+                                            touchEv.target:setFillColor(0, 71/255, 93/255)
+                                            objs.scroll:takeFocus(touchEv)
+                                        elseif touchEv.phase == 'ended' or touchEv.phase == 'cancelled' then
+                                            display.getCurrentStage():setFocus(touchEv.target, nil)
+                                            touchEv.target:setFillColor(0/255, 71/255, 93/255)
+                                            if touchEv.phase == 'ended' then
+                                                local existingSprites = plugins.json.decode(funsP['получить сохранение'](app.idObject..'/images'))
                                                 local counter = plugins.json.decode(funsP['получить сохранение'](app.idProject..'/counter'))
                                                 local allocNewSprite = counter[3]+1
                                                 counter[3] = allocNewSprite
                                                 funsP['записать сохранение'](app.idProject..'/counter', plugins.json.encode(counter))
-                                                local params = {}
-                                                params.progress = true
-                                                network.download( event.target.link, 'GET',  function(event)
-                                                    if event.phase == 'ended' then
-                                                        sprites[#sprites+1] = {v['name'], allocNewSprite}
-                                                        funsP['записать сохранение'](app.idObject..'/images', plugins.json.encode(sprites))
-                                                        funAddImage()
-                                                        onBack()
+                                                local dlParams = {progress = true}
+                                                network.download( touchEv.target.link, 'GET', function(saveEv)
+                                                    if saveEv.phase == 'ended' and not saveEv.isError then
+                                                        existingSprites[#existingSprites+1] = {v['name'], allocNewSprite}
+                                                        funsP['записать сохранение'](app.idObject..'/images', plugins.json.encode(existingSprites))
+                                                        if objs.gen then
+                                                            funAddImage()
+                                                            onBack()
+                                                        end
                                                     end
-                                                end, params, app.idObject..'/image_'..allocNewSprite..'.png', system.DocumentsDirectory)
+                                                end, dlParams, app.idObject..'/image_'..allocNewSprite..'.png', system.DocumentsDirectory)
                                             end
-                                            return true
-                                        end)
-                                        scroll:setScrollHeight(groupSceneScroll.height+display.contentWidth/1.5)
-                                        y = y + bg.height
+                                        end
+                                        return true
                                     end)
-                                    --obj.x = CENTER_X
-                                end
-                            end, params, v['name']..'.png', system.TemporaryDirectory)
-                        else
-                            break
-                        end
-                        --y = y + bounds.height+10
-                        ----
+                                end)
+                            end
+                        end, params, tmpFile, system.TemporaryDirectory)
+                    else
+                        break
                     end
                 end
             end
@@ -191,38 +210,36 @@ function scene_readySprites( funAddImage )
             circleBackText.rotation = -90
             sceneGroup:insert(circleBackText)
             local function touchCircleList(event)
-                if (true) then
-                    if (event.phase=="began") then
-                        transition.to(event.target.circleAlpha, {alpha=1, xScale=1, yScale=1, time=100})
-                        display.getCurrentStage():setFocus(event.target, event.id)
-                    elseif (event.phase=="moved") then
-                    else
-                        transition.to(event.target.circleAlpha, {alpha=0, xScale=0.75, yScale=0.75, time=100})
-                        display.getCurrentStage():setFocus(event.target, nil)
+                if (event.phase=="began") then
+                    transition.to(event.target.circleAlpha, {alpha=1, xScale=1, yScale=1, time=100})
+                    display.getCurrentStage():setFocus(event.target, event.id)
+                elseif (event.phase=="moved") then
+                elseif (event.phase=="ended" or event.phase=="cancelled") then
+                    transition.to(event.target.circleAlpha, {alpha=0, xScale=0.75, yScale=0.75, time=100})
+                    display.getCurrentStage():setFocus(event.target, nil)
 
-                        if (event.target.alpha>0.75) then
-                            if (event.target==circleFront) then
-                                listId = listId + 1
-                                circleBack.alpha = 1
-                                circleBackText.alpha = 1
-                                if (spritesArray[(listId-1)*10+12]==nil) then
-                                    circleFront.alpha = 0.5
-                                    circleFrontText.alpha = 0.5
-                                end
-                            else
-                                listId = listId - 1
-                                circleFront.alpha = 1
-                                circleFrontText.alpha = 1
-                                if (listId==1) then
-                                    circleBack.alpha = 0.5
-                                    circleBackText.alpha = 0.5
-                                end
+                    if (event.phase=="ended" and event.target.alpha>0.75) then
+                        if (event.target==circleFront) then
+                            listId = listId + 1
+                            circleBack.alpha = 1
+                            circleBackText.alpha = 1
+                            if (spritesArray[listId*10+1]==nil) then
+                                circleFront.alpha = 0.5
+                                circleFrontText.alpha = 0.5
                             end
-                            scroll:scrollTo("top", {
-                                time=100
-                            })
-                            loadList((listId-1)*10+1, (listId-1)*10+11)
+                        else
+                            listId = listId - 1
+                            circleFront.alpha = 1
+                            circleFrontText.alpha = 1
+                            if (listId==1) then
+                                circleBack.alpha = 0.5
+                                circleBackText.alpha = 0.5
+                            end
                         end
+                        scroll:scrollTo("top", {
+                            time=100
+                        })
+                        loadList((listId-1)*10+1, listId*10)
                     end
                 end
                 return(true)
@@ -231,7 +248,7 @@ function scene_readySprites( funAddImage )
             circleBack:addEventListener("touch", touchCircleList)
             circleBack.alpha = 0.5
             circleBackText.alpha = 0.5
-            if (#spritesArray<10) then
+            if (#spritesArray<=10) then
                 circleFront.alpha = 0.5
                 circleFrontText.alpha = 0.5
             end
@@ -240,7 +257,6 @@ function scene_readySprites( funAddImage )
             app.cerberus.newBannerQuestion(app.words[550], nil, "", app.words[16])
         end
     end)
-
 
     funBackObjects[1] = onBack
 end

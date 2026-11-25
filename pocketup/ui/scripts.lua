@@ -48,6 +48,25 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
     local funAddVideo = nil
     local touchBlock = nil
     local isBlockTouchBlock = false
+    local activeMoveTimer = nil
+    local activeVideoPreview = nil
+    local stopPreviewSound = function() end
+    local function cancelActiveMoveTimer()
+        if activeMoveTimer then
+            timer.cancel(activeMoveTimer)
+            activeMoveTimer = nil
+        end
+    end
+    local function stopPreviewVideo()
+        if activeVideoPreview then
+            pcall(function()
+                if activeVideoPreview.pause then
+                    activeVideoPreview:pause()
+                end
+            end)
+            activeVideoPreview = nil
+        end
+    end
     local function compartmentScripts()
         local groupSceneScroll = display.newGroup()
         scrollProjects:insert(groupSceneScroll)
@@ -74,7 +93,14 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                             objectsParameter[3].yScale = 1
                         end
                         scrollProjects:takeFocus(event)
-                    elseif (event.phase ~= "moved") then
+                    elseif (event.phase == "ended" or event.phase == "cancelled") then
+                        display.getCurrentStage():setFocus(event.target, nil)
+                        if (event.phase ~= "ended") then
+                            if (objectsParameter[1] == "cell" or objectsParameter[1] == "shapeHitbox") then
+                                objectsParameter[3].yScale = 1
+                            end
+                            return true
+                        end
                         local idParameter = event.target.typeParameter
 
                         local function isPrem()
@@ -690,7 +716,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                                                 {
                                                                     time = 200,
                                                                     alpha = 0,
-                                                                    inComplete = function()
+                                                                    onComplete = function()
                                                                         display.remove(backgroundBlackAlpha)
                                                                     end
                                                                 })
@@ -699,7 +725,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                                                 {
                                                                     time = 200,
                                                                     alpha = 0,
-                                                                    inComplete = function()
+                                                                    onComplete = function()
                                                                         display.remove(group)
                                                                     end
                                                                 })
@@ -737,7 +763,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                                             {
                                                                 time = 200,
                                                                 alpha = 0,
-                                                                inComplete = function()
+                                                                onComplete = function()
                                                                     display.remove(backgroundBlackAlpha)
                                                                 end
                                                             })
@@ -745,7 +771,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                                         transition.to(group, {
                                                             time = 200,
                                                             alpha = 0,
-                                                            inComplete = function()
+                                                            onComplete = function()
                                                                 display.remove(group)
                                                             end
                                                         })
@@ -803,7 +829,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                                             display.contentWidth / 34
                                                             updateHeightRect()
                                                         end
-                                                    elseif (event.pahse == "ended") then
+                                                    elseif (event.phase == "ended") then
                                                     end
                                                 end)
                                             end
@@ -936,7 +962,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                     button:addEventListener("touch", touchAnswerFunction)
                                     group:insert(button)
                                     local header = display.newText(tableAnswers[i][1], display.contentWidth / 50,
-                                        button.y + button.height / 2, nil, fontSuze2)
+                                        button.y + button.height / 2, nil, app.fontSize2)
                                     header.anchorX = 0
                                     group:insert(header)
                                     button.answer = tableAnswers[i][2]
@@ -963,10 +989,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                 end)
                             elseif (idParameter == "shapeHitbox") then
                                 objectsParameter[3].yScale = 1
-                                local file = io.open(
-                                system.pathForFile(app.idObject .. "/images.txt", system.DocumentsDirectory), 'r')
-                                local contents = plugins.json.decode(file:read("*a"))
-                                io.close(file)
+                                local contents = funsP["получить json"](app.idObject .. "/images")
                                 if (#contents > 0) then
                                     app.scenes[app.scene][1].alpha = 0
                                     scene_redactorShapeHitbox(blocks[event.target.block.id][2][event.target.idParameter],
@@ -1011,7 +1034,8 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                     if (allBlocks[blocks[event.target.id][1]] ~= nil and type(allBlocks[blocks[event.target.id][1]][6]) == "boolean") then
                         isTimerMoveBlock = true
                         timerMoveBlock = timer.performWithDelay(event.autoMove == nil and 200 or 0, function()
-                            if (allBlocks[blocks[event.target.id][1]] ~= nil) then
+                            activeMoveTimer = nil
+                            if (groupSceneScroll and groupSceneScroll.x and event.target and event.target.x and allBlocks[blocks[event.target.id][1]] ~= nil) then
                                 local backgroundAlpha = display.newRect(CENTER_X - display.screenOriginX, 0,
                                     display.contentWidth,
                                     math.max(groupSceneScroll.height + display.contentWidth / 1.5,
@@ -1135,6 +1159,10 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                         isTimerMoveBlock = false
                                         isMoveBlock = true
                                         timerMoveBlock = timer.performWithDelay(0, function()
+                                            if not (groupSceneScroll and groupSceneScroll.x and event.target and event.target.x and event.target.backgroundAlpha) then
+                                                if timerMoveBlock then timer.cancel(timerMoveBlock); timerMoveBlock = nil end
+                                                return
+                                            end
                                             local xS, yS = scrollProjects:getContentPosition()
                                             if (event.target.y > -yS + scrollProjects.height / 2 + scrollProjects.height / 4 or event.target.y < -yS + scrollProjects.height / 2 - scrollProjects.height / 4) then
                                                 local yPlus = nil
@@ -1205,7 +1233,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                             transitionBlock.yGoalPos = transitionBlock.yGoalPos -
                             (heightBlockScale - display.contentWidth / 60) * topOrBottom
                             transition.to(transitionBlock,
-                                { time = 200, y = transitionBlock.yGoalPos, transition = easing.inOutGuad })
+                                { time = 200, y = transitionBlock.yGoalPos, transition = easing.inOutQuad })
                             event.target.yGoalPos = event.target.yGoalPos +
                             (transitionBlock.height - display.contentWidth / 60) * topOrBottom
                         end
@@ -1391,7 +1419,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                     elseif (event.target.nameFunction == "copy") then
                                         isBlockTouchBlock = true
                                         local idBlock = tBlock.id
-                                        local tableBlock = plugins.json.decode(plugins.json.encode(blocks[idBlock]))
+                                        local tableBlock = utils.deepCopy(blocks[idBlock])
                                         local block = createBlock(tableBlock)
                                         if (tableBlock[3] == "off") then
                                             block.image1.fill.effect = "filter.desaturate"
@@ -1415,7 +1443,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                             block.investBlocks = {}
                                             local i = idOldBlock + 1
                                             while (i <= #blocks and (allBlocks[blocks[i][1]] == nil or allBlocks[blocks[i][1]][1] ~= "event")) do
-                                                local mTableBlock = plugins.json.decode(plugins.json.encode(blocks[i]))
+                                                local mTableBlock = utils.deepCopy(blocks[i])
                                                 local mBlock = createBlock(mTableBlock)
                                                 if (mTableBlock[3] == "off") then
                                                     mBlock.image1.fill.effect = "filter.desaturate"
@@ -1440,7 +1468,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                             block.id = i
                                             yTargetPos = yTargetPos + block.height - display.contentWidth / 60
                                             block.yGoalPos = yTargetPos - block.height / 2
-                                            block.y = block.yGoalPos
+                                            block.y = blocksObjects[i].yGoalPos
                                         end
 
                                         if (allBlocks[blocks[idOldBlock][1]][6] == true) then
@@ -1455,7 +1483,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                                                         attachments = attachments - 1
                                                     end
                                                 end
-                                                local mTableBlock = plugins.json.decode(plugins.json.encode(blocks[i]))
+                                                local mTableBlock = utils.deepCopy(blocks[i])
                                                 local mBlock = createBlock(mTableBlock)
                                                 if (mTableBlock[3] == "off") then
                                                     mBlock.image1.fill.effect = "filter.desaturate"
@@ -1902,7 +1930,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                     transition.to(groupMenu, {
                         time = 200,
                         alpha = 0,
-                        onComolete = function()
+                        onComplete = function()
                             display.remove(groupMenu)
                         end
                     })
@@ -1937,7 +1965,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                     transition.to(groupMenu, {
                         time = 200,
                         alpha = 0,
-                        onComolete = function()
+                        onComplete = function()
                             display.remove(groupMenu)
                         end
                     })
@@ -1959,6 +1987,14 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
         funBackObjects[1] = function()
             if (not isBlockTouchBlock and isBackScene ~= "block") then
                 if (isBackScene == "back") then
+                    cancelActiveMoveTimer()
+                    if (isTimerMoveBlock and timerMoveBlock) then
+                        isTimerMoveBlock = false
+                        timer.cancel(timerMoveBlock)
+                        timerMoveBlock = nil
+                    end
+                    stopPreviewSound()
+                    stopPreviewVideo()
                     display.remove(groupSceneScroll)
                     display.remove(groupScene)
                     scene_objects(infoSceneObjects[1], infoSceneObjects[2], infoSceneObjects[3])
@@ -1999,7 +2035,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
             }
             local originalName = blockTable[1]
             if (tableReplacementBlocks[blockTable[1]] ~= nil) then
-                blockTable = tableReplacementBlocks[blockTable[1]]
+                blockTable = utils.deepCopy(tableReplacementBlocks[blockTable[1]])
             end
             local function funAdditionallyBlock(event)
                 local answer = {}
@@ -2014,7 +2050,6 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 end
                 return (answer)
             end
-            local tableInvestBlocks = plugins.json.decode(plugins.json.encode(additionallyBlocks))
 
             if (#blocksObjects == 0 and allBlocks[blockTable[1]][1] ~= "event") then
                 local startBlock = createBlock({ "start", {} })
@@ -2034,7 +2069,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 block.cells[i][2]:addEventListener("touch", touchParameter)
             end
             block.investBlocks = allBlocks[originalName][1] == "event" and {} or
-            tableInvestBlocks[originalName] ~= nil and funAdditionallyBlock(tableInvestBlocks[originalName]) or nil
+            additionallyBlocks[originalName] ~= nil and funAdditionallyBlock(utils.deepCopy(additionallyBlocks[originalName])) or nil
             groupSceneScroll:insert(block)
             if (#blocksObjects == 1 and allBlocks[blockTable[1]][1] ~= "event") then
                 block.y = blocksObjects[1].y + blocksObjects[1].height / 2 + block.height / 2 - display.contentWidth / 60
@@ -2270,14 +2305,19 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 display.getCurrentStage():setFocus(event.target, event.id)
                 isTimerMoveSlot = true
                 timerMoveSlot = timer.performWithDelay(250, function()
-                    isTimerMoveSlot = false
-                    isMoveSlot = true
-                    event.target.myGroup:toFront()
+                    activeMoveTimer = nil
+                    if event.target and event.target.myGroup and event.target.myGroup.x then
+                        isTimerMoveSlot = false
+                        isMoveSlot = true
+                        event.target.myGroup:toFront()
+                    end
                 end)
+                activeMoveTimer = timerMoveSlot
             elseif (event.phase == "moved" and (math.abs(event.xStart - event.x) > 20 or math.abs(event.yStart - event.y) > 20)) then
                 if (isTimerMoveSlot) then
                     isTimerMoveSlot = false
-                    timer.cancel(timerMoveSlot)
+                    if timerMoveSlot then timer.cancel(timerMoveSlot); timerMoveSlot = nil end
+                    activeMoveTimer = nil
                     event.target:setFillColor(0, 71 / 255, 93 / 255)
                     scrollProjects:takeFocus(event)
                 end
@@ -2312,9 +2352,12 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 display.getCurrentStage():setFocus(event.target, nil)
                 if (isTimerMoveSlot) then
                     isTimerMoveSlot = false
-                    timer.cancel(timerMoveSlot)
-                    groupScene.alpha = 0
-                    scene_viewsprite(event.target.pathImage, event.target.nameProject.text)
+                    if timerMoveSlot then timer.cancel(timerMoveSlot); timerMoveSlot = nil end
+                    activeMoveTimer = nil
+                    if event.phase == "ended" then
+                        groupScene.alpha = 0
+                        scene_viewsprite(event.target.pathImage, event.target.nameProject.text)
+                    end
                     -- на объект нажали
                 end
                 if (isMoveSlot) then
@@ -2349,14 +2392,15 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
             containerIcon.x, containerIcon.y = strokeIcon.x, strokeIcon.y
             buttonRect.pathImage = app.idObject .. "/image_" .. images[i][2] .. ".png"
             local imageIcon = display.newImage(buttonRect.pathImage, system.DocumentsDirectory)
-            containerIcon:insert(imageIcon)
-            strokeIcon:toFront()
-
-            local sizeIconProject = containerIcon.height / imageIcon.height
-            if (imageIcon.width * sizeIconProject < containerIcon.width) then
-                sizeIconProject = containerIcon.width / imageIcon.width
+            if imageIcon then
+                containerIcon:insert(imageIcon)
+                local sizeIconProject = containerIcon.height / imageIcon.height
+                if (imageIcon.width * sizeIconProject < containerIcon.width) then
+                    sizeIconProject = containerIcon.width / imageIcon.width
+                end
+                imageIcon.xScale, imageIcon.yScale = sizeIconProject, sizeIconProject
             end
-            imageIcon.xScale, imageIcon.yScale = sizeIconProject, sizeIconProject
+            strokeIcon:toFront()
 
             local nameProject = display.newText({
                 text = images[i][1],
@@ -2445,14 +2489,15 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 containerIcon.x, containerIcon.y = strokeIcon.x, strokeIcon.y
                 buttonRect.pathImage = app.idObject .. "/image_" .. images[i][2] .. ".png"
                 local imageIcon = display.newImage(buttonRect.pathImage, system.DocumentsDirectory)
-                containerIcon:insert(imageIcon)
-                strokeIcon:toFront()
-
-                local sizeIconProject = containerIcon.height / imageIcon.height
-                if (imageIcon.width * sizeIconProject < containerIcon.width) then
-                    sizeIconProject = containerIcon.width / imageIcon.width
+                if imageIcon then
+                    containerIcon:insert(imageIcon)
+                    local sizeIconProject = containerIcon.height / imageIcon.height
+                    if (imageIcon.width * sizeIconProject < containerIcon.width) then
+                        sizeIconProject = containerIcon.width / imageIcon.width
+                    end
+                    imageIcon.xScale, imageIcon.yScale = sizeIconProject, sizeIconProject
                 end
-                imageIcon.xScale, imageIcon.yScale = sizeIconProject, sizeIconProject
+                strokeIcon:toFront()
 
                 local nameProject = display.newText({
                     text = images[i][1],
@@ -2518,14 +2563,15 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 containerIcon.x, containerIcon.y = strokeIcon.x, strokeIcon.y
                 buttonRect.pathImage = app.idObject .. "/image_" .. images[i][2] .. ".png"
                 local imageIcon = display.newImage(buttonRect.pathImage, system.DocumentsDirectory)
-                containerIcon:insert(imageIcon)
-                strokeIcon:toFront()
-
-                local sizeIconProject = containerIcon.height / imageIcon.height
-                if (imageIcon.width * sizeIconProject < containerIcon.width) then
-                    sizeIconProject = containerIcon.width / imageIcon.width
+                if imageIcon then
+                    containerIcon:insert(imageIcon)
+                    local sizeIconProject = containerIcon.height / imageIcon.height
+                    if (imageIcon.width * sizeIconProject < containerIcon.width) then
+                        sizeIconProject = containerIcon.width / imageIcon.width
+                    end
+                    imageIcon.xScale, imageIcon.yScale = sizeIconProject, sizeIconProject
                 end
-                imageIcon.xScale, imageIcon.yScale = sizeIconProject, sizeIconProject
+                strokeIcon:toFront()
 
                 local nameProject = display.newText({
                     text = images[i][1],
@@ -2595,7 +2641,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                     transition.to(groupMenu, {
                         time = 200,
                         alpha = 0,
-                        onComolete = function()
+                        onComplete = function()
                             display.remove(groupMenu)
                         end
                     })
@@ -2630,7 +2676,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                     transition.to(groupMenu, {
                         time = 200,
                         alpha = 0,
-                        onComolete = function()
+                        onComplete = function()
                             display.remove(groupMenu)
                         end
                     })
@@ -2648,7 +2694,28 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
 
     local objectPlay = nil
     local playSound = nil
+    local loadedSoundHandle = nil
     local touchPlaySound = nil
+    stopPreviewSound = function()
+        if (objectPlay ~= nil) then
+            audio.stop(playSound)
+            if (loadedSoundHandle ~= nil) then
+                audio.dispose(loadedSoundHandle)
+                loadedSoundHandle = nil
+            end
+            objectPlay.fill = {
+                type = "image",
+                filename = "images/play.png",
+            }
+            objectPlay = nil
+            playSound = nil
+        elseif (loadedSoundHandle ~= nil) then
+            audio.stop(playSound)
+            audio.dispose(loadedSoundHandle)
+            loadedSoundHandle = nil
+            playSound = nil
+        end
+    end
     local function compartmentSounds()
         local groupSceneScroll = display.newGroup()
         scrollProjects:insert(groupSceneScroll)
@@ -2664,45 +2731,49 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
         touchPlaySound = function(event)
             if (event.phase == "began") then
                 display.getCurrentStage():setFocus(event.target, event.id)
-            elseif (event.phase == "moved") then
+            elseif (event.phase == "moved" and (math.abs(event.x - event.xStart) > 20 or math.abs(event.y - event.yStart) > 20)) then
                 scrollProjects:takeFocus(event)
-            else
-                if (objectPlay ~= nil and objectPlay ~= event.target) then
-                    objectPlay.fill = {
-                        type = "image",
-                        filename = "images/play.png",
-                    }
-                    objectPlay = nil
-                    audio.stop(playSound)
+            elseif (event.phase == "ended" or event.phase == "cancelled") then
+                display.getCurrentStage():setFocus(event.target, nil)
+                if (event.phase ~= "ended") then
+                    return true
                 end
                 if (objectPlay == event.target) then
-                    event.target.fill = {
-                        type = "image",
-                        filename = "images/play.png",
-                    }
-                    objectPlay = nil
-                    audio.stop(playSound)
+                    stopPreviewSound()
                 else
+                    stopPreviewSound()
                     event.target.fill = {
                         type = "image",
                         filename = "images/stop.png",
                     }
                     objectPlay = event.target
-                    local loadSound = audio.loadStream(event.target.pathSound, system.DocumentsDirectory)
-                    playSound = audio.play(loadSound, {
-                        onComplete = function()
-                            if (objectPlay == event.target) then
-                                event.target.fill = {
-                                    type = "image",
-                                    filename = "images/play.png",
-                                }
-                                objectPlay = nil
+                    local soundHandle = audio.loadStream(event.target.pathSound, system.DocumentsDirectory)
+                    loadedSoundHandle = soundHandle
+                    if soundHandle then
+                        playSound = audio.play(soundHandle, {
+                            onComplete = function()
+                                if (loadedSoundHandle == soundHandle) then
+                                    audio.dispose(soundHandle)
+                                    loadedSoundHandle = nil
+                                    playSound = nil
+                                end
+                                if (objectPlay == event.target and event.target.x ~= nil) then
+                                    event.target.fill = {
+                                        type = "image",
+                                        filename = "images/play.png",
+                                    }
+                                    objectPlay = nil
+                                end
                             end
-                        end
-                    })
-                    audio.dispose(loadSound)
+                        })
+                    else
+                        objectPlay.fill = {
+                            type = "image",
+                            filename = "images/play.png",
+                        }
+                        objectPlay = nil
+                    end
                 end
-                display.getCurrentStage():setFocus(event.target, nil)
             end
             return (true)
         end
@@ -2751,8 +2822,9 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                         isBackScene = "back"
 
                         if (event.target.typeFunction == "delete") then
+                            stopPreviewSound()
                             local idSlot = eventTargetMenu.slot.idSlot
-                            os.remove(system.pathForFile(app.idObject .. "/sound_" .. sounds[idSlot][2] .. ".MP3",
+                            os.remove(system.pathForFile(app.idObject .. "/sound_" .. sounds[idSlot][2] .. ".mp3",
                                 system.DocumentsDirectory))
                             table.remove(sounds, idSlot)
                             table.remove(arraySlots, idSlot)
@@ -2854,14 +2926,19 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 display.getCurrentStage():setFocus(event.target, event.id)
                 isTimerMoveSlot = true
                 timerMoveSlot = timer.performWithDelay(250, function()
-                    isTimerMoveSlot = false
-                    isMoveSlot = true
-                    event.target.myGroup:toFront()
+                    activeMoveTimer = nil
+                    if event.target and event.target.myGroup and event.target.myGroup.x then
+                        isTimerMoveSlot = false
+                        isMoveSlot = true
+                        event.target.myGroup:toFront()
+                    end
                 end)
-            elseif (event.phase == "moved") then
+                activeMoveTimer = timerMoveSlot
+            elseif (event.phase == "moved" and (math.abs(event.xStart - event.x) > 20 or math.abs(event.yStart - event.y) > 20)) then
                 if (isTimerMoveSlot) then
                     isTimerMoveSlot = false
-                    timer.cancel(timerMoveSlot)
+                    if timerMoveSlot then timer.cancel(timerMoveSlot); timerMoveSlot = nil end
+                    activeMoveTimer = nil
                     event.target:setFillColor(0, 71 / 255, 93 / 255)
                     scrollProjects:takeFocus(event)
                 end
@@ -2891,12 +2968,13 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                         button.yGoalPos = button.yGoalPos + button.height * newId
                     end
                 end
-            else
+            elseif (event.phase ~= "moved") then
                 event.target:setFillColor(0, 71 / 255, 93 / 255)
                 display.getCurrentStage():setFocus(event.target, nil)
                 if (isTimerMoveSlot) then
                     isTimerMoveSlot = false
-                    timer.cancel(timerMoveSlot)
+                    if timerMoveSlot then timer.cancel(timerMoveSlot); timerMoveSlot = nil end
+                    activeMoveTimer = nil
                     -- на объект нажали
                 end
                 if (isMoveSlot) then
@@ -3063,13 +3141,12 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
 
         funBackObjects[1] = function()
             if (isBackScene == "back") then
+                cancelActiveMoveTimer()
+                stopPreviewSound()
+                stopPreviewVideo()
                 display.remove(groupSceneScroll)
                 display.remove(groupScene)
                 scene_objects(infoSceneObjects[1], infoSceneObjects[2], infoSceneObjects[3])
-                if (objectPlay ~= nil) then
-                    audio.stop(playSound)
-                    local objectPlay = nil
-                end
             end
         end
     end
@@ -3128,7 +3205,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
 
                         if (event.target.typeFunction == "delete") then
                             local idSlot = eventTargetMenu.slot.idSlot
-                            os.remove(system.pathForFile(app.idObject .. "/video_" .. videos[idSlot][2] .. ".MP4",
+                            os.remove(system.pathForFile(app.idObject .. "/video_" .. videos[idSlot][2] .. ".mp4",
                                 system.DocumentsDirectory))
                             table.remove(videos, idSlot)
                             table.remove(arraySlots, idSlot)
@@ -3237,14 +3314,19 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 display.getCurrentStage():setFocus(event.target, event.id)
                 isTimerMoveSlot = true
                 timerMoveSlot = timer.performWithDelay(250, function()
-                    isTimerMoveSlot = false
-                    isMoveSlot = true
-                    event.target.myGroup:toFront()
+                    activeMoveTimer = nil
+                    if event.target and event.target.myGroup and event.target.myGroup.x then
+                        isTimerMoveSlot = false
+                        isMoveSlot = true
+                        event.target.myGroup:toFront()
+                    end
                 end)
+                activeMoveTimer = timerMoveSlot
             elseif (event.phase == "moved" and (math.abs(event.xStart - event.x) > 20 or math.abs(event.yStart - event.y) > 20)) then
                 if (isTimerMoveSlot) then
                     isTimerMoveSlot = false
-                    timer.cancel(timerMoveSlot)
+                    if timerMoveSlot then timer.cancel(timerMoveSlot); timerMoveSlot = nil end
+                    activeMoveTimer = nil
                     event.target:setFillColor(0, 71 / 255, 93 / 255)
                     scrollProjects:takeFocus(event)
                 end
@@ -3279,20 +3361,22 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 display.getCurrentStage():setFocus(event.target, nil)
                 if (isTimerMoveSlot) then
                     isTimerMoveSlot = false
-                    timer.cancel(timerMoveSlot)
+                    if timerMoveSlot then timer.cancel(timerMoveSlot); timerMoveSlot = nil end
+                    activeMoveTimer = nil
 
-                    --
-                    if (objectPlay ~= nil and objectPlay ~= event.target.imageIcon) then
-                        objectPlay:pause()
-                        --event.target.imageIcon:play()
-                        --objectPlay = event.target.imageIcon
-                    end
-                    if (objectPlay == event.target.imageIcon) then
-                        objectPlay = nil
-                        event.target.imageIcon:pause()
-                    else
-                        objectPlay = event.target.imageIcon
-                        event.target.imageIcon:play()
+                    if event.phase == "ended" then
+                        if (objectPlay ~= nil and objectPlay ~= event.target.imageIcon) then
+                            pcall(function() objectPlay:pause() end)
+                        end
+                        if (objectPlay == event.target.imageIcon) then
+                            objectPlay = nil
+                            activeVideoPreview = nil
+                            pcall(function() event.target.imageIcon:pause() end)
+                        else
+                            objectPlay = event.target.imageIcon
+                            activeVideoPreview = objectPlay
+                            pcall(function() event.target.imageIcon:play() end)
+                        end
                     end
 
                     -- на объект нажали
@@ -3522,7 +3606,6 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 local idCategory = math.round((event.x - CENTER_X - display.contentWidth / 8) / (display.contentWidth / 4)) +
                 2
                 typeFunctionCompartment = idCategory
-                print(idCategory)
                 if (oldIdCategory ~= idCategory) then
                     if (idCategory ~= 2 and idCategory ~= 3) then
                         topBarArray[4].alpha = 1
@@ -3530,9 +3613,11 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                         topBarArray[4].alpha = 0
                     end
                     if (oldIdCategory == 2) then
-                        audio.stop(playSound)
-                        local objectPlay = nil
+                        stopPreviewSound()
+                    elseif (oldIdCategory == 3) then
+                        stopPreviewVideo()
                     end
+                    cancelActiveMoveTimer()
                     switchBarRect.xGoalPos = CENTER_X + ((idCategory - 1.5) * display.contentWidth / 4)
                     transition.to(switchBarRect, { x = switchBarRect.xGoalPos, time = 200, transition = easing.outQuad })
                     display.remove(app.scenes[app.scene][2])
@@ -3570,7 +3655,7 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
     circlePlayAlpha.xScale, circlePlayAlpha.yScale, circlePlayAlpha.alpha = 0.75, 0.75, 0
     groupScene:insert(circlePlayAlpha)
     circlePlay.circleAlpha = circlePlayAlpha
-    circlePlusText = display.newText("+", circlePlus.x, circlePlus.y, nil, app.fontSize0 * 1.75)
+    local circlePlusText = display.newText("+", circlePlus.x, circlePlus.y, nil, app.fontSize0 * 1.75)
     groupScene:insert(circlePlusText)
     local function touchCirclePlus(event)
         if (not isBlockTouchBlock) then
@@ -3578,11 +3663,11 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
                 transition.to(event.target.circleAlpha, { alpha = 1, xScale = 1, yScale = 1, time = 100 })
                 display.getCurrentStage():setFocus(event.target, event.id)
             elseif (event.phase == "moved") then
-            else
+            elseif (event.phase == "ended" or event.phase == "cancelled") then
                 transition.to(event.target.circleAlpha, { alpha = 0, xScale = 0.75, yScale = 0.75, time = 100 })
                 display.getCurrentStage():setFocus(event.target, nil)
 
-                if (isBackScene == "back") then
+                if (event.phase == "ended" and isBackScene == "back") then
                     if (typeFunctionCompartment == 0) then
                         app.scenes[app.scene][1].alpha = 0
                         app.scenes[app.scene][1].x = display.contentWidth
@@ -3605,23 +3690,18 @@ function scene_scripts(headerBar, pathObject, infoSceneObjects)
             if event.phase == 'began' then
                 transition.to(event.target.circleAlpha, { alpha = 1, xScale = 1, yScale = 1, time = 100 })
                 display.getCurrentStage():setFocus(event.target, event.id)
-            elseif event.phase ~= 'moved' and event.phase ~= 'began' then
+            elseif event.phase == 'ended' or event.phase == 'cancelled' then
                 transition.to(event.target.circleAlpha, { alpha = 0, xScale = 0.75, yScale = 0.75, time = 100 })
                 display.getCurrentStage():setFocus(event.target, nil)
-                if isBackScene == 'back' then
+                if event.phase == 'ended' and isBackScene == 'back' then
+                    cancelActiveMoveTimer()
                     app.scenes[app.scene][2].alpha = 0
                     app.scenes[app.scene][1].alpha = 0
                     isBackScene = 'block'
-                    if (objectPlay ~= nil) then
-                        audio.stop(playSound)
-                        objectPlay.fill = {
-                            type = "image",
-                            filename = "images/play.png"
-                        }
-                        objectPlay = nil
-                    end
+                    stopPreviewSound()
+                    stopPreviewVideo()
                     display.remove(app.scenes[app.scene][2])
-                    display.remove(app.scenes[app.scene[1]])
+                    display.remove(app.scenes[app.scene][1])
                     scene_run_game('scripts', { headerBar, pathObject, infoSceneObjects })
                 end
             end

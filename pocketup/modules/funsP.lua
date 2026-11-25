@@ -19,27 +19,62 @@ else
 	io.close(fileSettingsSave)
 end
 
+local _ssCache = nil
+local _saveStrCache = {}
+local _saveJsonCache = {}
+
+local function canAccessSettingsSave()
+	local sc = app.scene and app.scenes and app.scenes[app.scene] and app.scenes[app.scene][1]
+	return (sc == nil or sc.iscg == nil)
+end
+
+local function loadSettingsSave()
+	if _ssCache == nil then
+		local file = io.open(pathSettingsSave, "rb")
+		if file then
+			local raw = file:read("*a")
+			io.close(file)
+			_ssCache = plugins.json.decode(raw) or {}
+		else
+			_ssCache = {}
+		end
+	end
+	return _ssCache
+end
+
+function funsP_invalidateCache(prefix)
+	if not prefix then
+		_saveStrCache = {}
+		_saveJsonCache = {}
+		return
+	end
+	for k in pairs(_saveStrCache) do
+		if k == prefix or k:sub(1, #prefix + 1) == prefix .. "/" then
+			_saveStrCache[k] = nil
+			_saveJsonCache[k] = nil
+		end
+	end
+end
+
+funsP["очистить кэш"] = funsP_invalidateCache
+
 funsP["прочитать сс сохранение"] = function(nameSave)
-	if (((nameSave~="isPremium" and nameSave~="blockPrem")) and app.scenes[app.scene][1].iscg==nil) then
-		local file = io.open(pathSettingsSave, "r")
-		local contents = plugins.json.decode(file:read("*a"))
-		io.close(file)
+	if ((nameSave~="isPremium" and nameSave~="blockPrem") and canAccessSettingsSave()) then
+		local contents = loadSettingsSave()
 		return(contents[nameSave])
 	end
 end
 funsP["записать сс сохранение"] = function(nameSave, value)
-	if (((nameSave~="isPremium" and nameSave~="blockPrem")) and app.scenes[app.scene][1].iscg==nil) then
-		local pathSettingsSave = system.pathForFile("settingsSave.txt", system.DocumentsDirectory)
-		local file2 = io.open(pathSettingsSave, "r")
-		local contents = plugins.json.decode(file2:read("*a"))
-		io.close(file2)
+	if ((nameSave~="isPremium" and nameSave~="blockPrem") and canAccessSettingsSave()) then
+		local contents = loadSettingsSave()
 		contents[nameSave] = value
-		contents = plugins.json.encode(contents)
-		local pathSettingsSave = system.pathForFile("settingsSave.txt", system.DocumentsDirectory)
+		local encoded = plugins.json.encode(contents)
 		pcall(function (...)
-			local file = io.open(pathSettingsSave, "w")
-			file:write(contents)
-			io.close(file)
+			local file = io.open(pathSettingsSave, "wb")
+			if file then
+				file:write(encoded)
+				io.close(file)
+			end
 		end)
 	end
 end
@@ -127,22 +162,44 @@ funsP["получить проекты"] = function(isSort)
 end
 
 funsP["получить сохранение"] = function(path)
+	local cached = _saveStrCache[path]
+	if cached ~= nil then
+		return cached
+	end
 	local docsPath = system.pathForFile(path..".txt", system.DocumentsDirectory)
-	local file = io.open(docsPath, "r")
+	local file = io.open(docsPath, "rb")
 	if (file~=nil) then
 		local contents = file:read("*a")
 		io.close(file)
+		_saveStrCache[path] = contents
 		return(contents)
 	else
 		return("[]")
 	end
 end
+funsP["получить json"] = function(path)
+	local cached = _saveJsonCache[path]
+	if cached ~= nil then
+		return cached
+	end
+	local raw = funsP["получить сохранение"](path)
+	local decoded = plugins.json.decode(raw)
+	if decoded == nil then
+		decoded = {}
+	end
+	_saveJsonCache[path] = decoded
+	return decoded
+end
 funsP["записать сохранение"] = function(path, value)
+	_saveStrCache[path] = value
+	_saveJsonCache[path] = nil
 	local docsPath = system.pathForFile(path..".txt", system.DocumentsDirectory)
 	pcall(function ()
-		local file = io.open(docsPath, "w")
-		file:write(value)
-		io.close(file)
+		local file = io.open(docsPath, "wb")
+		if file then
+			file:write(value)
+			io.close(file)
+		end
 	end)
 end
 
@@ -185,7 +242,7 @@ funsP["копировать объект"] = function (pathObject, pathCopy, idP
 		answer[i][2] = counter[4]
 		local nameFileCopy = "/sound_"..counter[4]..".mp3"
 		local docsPath = system.pathForFile(pathObject..nameFile, system.DocumentsDirectory)
-		local file = io.open(docsPath, "r")
+		local file = io.open(docsPath, "rb")
 		local contents = file:read("*a")
 		io.close(file)
 		local docsPath = system.pathForFile(pathCopy..nameFileCopy, system.DocumentsDirectory)
@@ -217,13 +274,23 @@ funsP["копировать объект"] = function (pathObject, pathCopy, idP
 end
 
 funsP["удалить объект"] = function(pathDir)
+	funsP_invalidateCache(pathDir)
 	local path = system.pathForFile(pathDir, system.DocumentsDirectory)
+	if not path then
+		return
+	end
+	local rootAttr = plugins.lfs.attributes(path)
+	if not rootAttr or rootAttr.mode ~= "directory" then
+		return
+	end
 	for file in plugins.lfs.dir(path) do
 		if (file~="." and file~="..") then
-			if (file:find('[.]')) then
-				os.remove(path.."/"..file)
-			else
+			local fullPath = path.."/"..file
+			local attr = plugins.lfs.attributes(fullPath)
+			if attr and attr.mode == "directory" then
 				funsP["удалить объект"](pathDir.."/"..file)
+			else
+				os.remove(fullPath)
 			end
 		end
 	end
@@ -392,7 +459,7 @@ funsP["создать проект"] = function(pathProject)
 	funsP["записать сохранение"](pathProject.."/scene_1/object_1/scripts", "[]")
 	funsP["записать сохранение"](pathProject.."/scene_1/object_1/sounds", "[]")
 	funsP["записать сохранение"](pathProject.."/scene_1/object_1/images", "[]")
-	funsP["записать сохранение"](pathProject.."/options", "[]")
+	funsP["записать сохранение"](pathProject.."/options", "{}")
 	local isAndroid = utils.isSim or  utils.isWin
 	if (isAndroid) then
 		local pathImage = system.pathForFile("sprites/icon_"..math.random(1,6)..".png", system.ResourceDirectory)
@@ -643,6 +710,7 @@ funsP["импортировать проект"] = function(onComplete)
 					path=system.pathForFile("importfile.zip", system.DocumentsDirectory),
 					folder=system.pathForFile(pathFolderProject, system.DocumentsDirectory),
 					listener=function(event)
+						funsP_invalidateCache(pathFolderProject)
 						onComplete(pathFolderProject)
 					end
 				}
@@ -664,6 +732,7 @@ funsP["импортировать проект"] = function(onComplete)
 						plugins.lfs.mkdir(system.pathForFile(pathFolderProject, system.DocumentsDirectory))
 
 						os.copy_folder(system.pathForFile('', system.TemporaryDirectory), system.pathForFile(pathFolderProject, system.DocumentsDirectory))
+						funsP_invalidateCache(pathFolderProject)
 
 						timer.performWithDelay(20, function ()
 							onComplete(pathFolderProject)

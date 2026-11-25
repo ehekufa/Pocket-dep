@@ -10,14 +10,14 @@ return {
             line.oldX, line.oldY = target.x, target.y\
             local timerPen\
             timerPen = timer.new(50, function()\
-                if target.isPen and line.append then\
+                if target and target.x and target.isPen and line.append then\
                     if (math.sqrt(math.pow(target.x-line.oldX, 2) + math.pow(target.y-line.oldY, 2))>3) then\
                         line:append(target.x, target.y)\
                         line.oldX, line.oldY = target.x, target.y\
                     end\
-                elseif (line.append == nil) then\
+                elseif target and target.x and target.isPen and (line.append == nil) then\
                     line = display.newLine(target.x, target.y, target.x, target.y+1)\
-                    line:setStrokeColor(tableFeathersOptions[2],tableFeathersOptions[3],tableFeathersOptions[4],1)\
+                    line:setStrokeColor(tableFeathersOptions[2]/255,tableFeathersOptions[3]/255,tableFeathersOptions[4]/255,1)\
                     line.strokeWidth = tableFeathersOptions[1]\
                     table.insert(tableFeathers, line)\
                     line.oldX, line.oldY = target.x, target.y\

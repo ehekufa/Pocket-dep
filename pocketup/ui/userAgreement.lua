@@ -27,7 +27,7 @@ function scene_userAgreement()
 		text=app.words[622],
 		width=scrollText.width/1.1,
 		align="left",
-		fontSize=fontSize1,
+		fontSize=app.fontSize1,
 		x=CENTER_X,
 		y = CENTER_X/10
 	})

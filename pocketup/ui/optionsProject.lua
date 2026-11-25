@@ -6,13 +6,16 @@ function scene_options(idProject, nameProject)
     local groupSceneScroll = display.newGroup()
     app.scene = "options"
     app.scenes[app.scene] = {groupSceneScroll, groupScene}
+    local isBackScene = "back"
     local funBackObjects = {}
     funBackObjects[1] = function ()
-    display.remove(app.scenes[app.scene][1])
-    display.remove(app.scenes[app.scene][2])
-    native.setKeyboardFocus(nil)
-    scene_projects()
-end
+        if isBackScene == "back" then
+            display.remove(app.scenes[app.scene][1])
+            display.remove(app.scenes[app.scene][2])
+            native.setKeyboardFocus(nil)
+            scene_projects()
+        end
+    end
 local topBarArray = topBar(groupScene, app.words[9], nil, nil, funBackObjects)
 topBarArray[4].alpha = 0
 
@@ -373,10 +376,20 @@ buttonDeleteProject:addEventListener("touch", function(event)
         buttonDeleteProject:setFillColor(213/255, 1/255, 0)
         display.getCurrentStage():setFocus(event.target, nil)
 
+        isBackScene = "block"
         app.cerberus.newBannerQuestion(app.words[54], function (tableAnswer)
+            isBackScene = "back"
             if(tableAnswer.isOk) then
+                native.setKeyboardFocus(nil)
                 table.remove(allProjects, idSlotProject)
                 funsP["записать сс сохранение"]("список проектов",plugins.json.encode(allProjects))
+                local lastProj = funsP["получить сохранение"]("lastProject")
+                if lastProj ~= "[]" then
+                    local ok, decoded = pcall(plugins.json.decode, lastProj)
+                    if ok and type(decoded) == "table" and decoded.id == idProject then
+                        funsP["записать сохранение"]("lastProject", "[]")
+                    end
+                end
                 local idsProjectsCreated = plugins.json.decode(funsP["прочитать сс сохранение"]("сортировка проектов - дата создания"))
                 local idsProjectsOpen = plugins.json.decode(funsP["прочитать сс сохранение"]("сортировка проектов - дата открытия"))
                 for i=1, #idsProjectsCreated do
@@ -391,10 +404,12 @@ buttonDeleteProject:addEventListener("touch", function(event)
                         break
                     end
                 end
-                for i=1, #idsProjectsOpen do
+                for i=1, #idsProjectsCreated do
                     if (idsProjectsCreated[i] > idSlotProject) then
                         idsProjectsCreated[i]=idsProjectsCreated[i]-1
                     end
+                end
+                for i=1, #idsProjectsOpen do
                     if (idsProjectsOpen[i] > idSlotProject) then
                         idsProjectsOpen[i]=idsProjectsOpen[i]-1
                     end

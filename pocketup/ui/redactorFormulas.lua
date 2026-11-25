@@ -58,26 +58,26 @@ function scene_formula_editor(objectsParameter, idBlock, idParameter, blocks)
 --ISCORRECTISCORRECTISCORRE
 --ISCORRECTISCORRECTISCORRE
 local function isCorrectFormulas()
-	local lang = system.getPreference( "locale", "language" )
 	local tableAnswers = calculateRedactorFormulas
-	local imagesObject = plugins.json.decode(funsP["получить сохранение"](app.idObject.."/images"))
+	local imagesObject = funsP["получить json"](app.idObject.."/images")
 	tableAnswers.countImages = #imagesObject
-	tableAnswers.nameImage = #imagesObject>0 and " '"..imagesObject[1][1]:gsub("'","\\'"):gsub(( utils.isWin and "\r\n" or "\n"),"\\n").."' " or " '' "
-	local myCode = ""
+	tableAnswers.nameImage = #imagesObject>0 and " '"..imagesObject[1][1]:gsub("'","\\'"):gsub((utils.isWin and "\r\n" or "\n"),"\\n").."' " or " '' "
+	local parts = {}
 	for i=1, #formulas do
-		local typeFormulaI= formulas[i][1]
+		local typeFormulaI = formulas[i][1]
 		if (typeFormulaI=="number") then
-			myCode = myCode..formulas[i][2]
+			parts[#parts+1] = formulas[i][2]
 		elseif (typeFormulaI=="globalArray" or typeFormulaI=="localArray") then
-			myCode = myCode.." {} "
+			parts[#parts+1] = " {} "
 		elseif (typeFormulaI=="text") then
-			myCode = myCode.." '"..formulas[i][2]:gsub("'","\\'"):gsub(( utils.isWin and "\r\n" or "\n"),"\\n").."' "
+			parts[#parts+1] = " '"..formulas[i][2]:gsub("'","\\'"):gsub((utils.isWin and "\r\n" or "\n"),"\\n").."' "
 		elseif (tableAnswers[formulas[i][2]]==nil) then
-			myCode = myCode.."(0)"
+			parts[#parts+1] = "(0)"
 		else
-			myCode = myCode.." "..tableAnswers[formulas[i][2]].." "
+			parts[#parts+1] = " "..tableAnswers[formulas[i][2]].." "
 		end
 	end
+	local myCode = table.concat(parts)
 	local corrValue = funsP["корректность формулы"]('('..myCode..')')
 	if (corrValue~=false) then
 		return(type(corrValue)=="table" and encodeList(corrValue) or type(corrValue)~="function" and corrValue or nil)
@@ -267,11 +267,11 @@ local function touchButtonABC()
 	        backgroundBlackAlpha:removeEventListener("touch",touchNoTouch)
 	        rect:removeEventListener("touch",touchNoTouch)
 
-	        transition.to(backgroundBlackAlpha, {time=200, alpha=0, inComplete=function()
+	        transition.to(backgroundBlackAlpha, {time=200, alpha=0, onComplete=function()
 	            display.remove(backgroundBlackAlpha)
 	        end})
 	        display.remove(input)
-	        transition.to(group, {time=200, alpha=0, inComplete=function()
+	        transition.to(group, {time=200, alpha=0, onComplete=function()
 	            display.remove(group)
 	        end})
 
@@ -322,7 +322,7 @@ local function touchButtonABC()
 	            textError.y = rectInput.y+rectInput.height+display.contentWidth/34
 	            updateHeightRect()
 	        end
-	    elseif (event.pahse=="ended") then
+	    elseif (event.phase=="ended") then
 	    end
 	end)
 
@@ -491,6 +491,7 @@ local function touchButtonColor()
 
 local function selectColor_palette()
 	miniGroup = display.newGroup()
+	local myMiniGroup = miniGroup
 	miniGroup.y = (lineColor.y+lineColor.height+rect.width/6.5)
 	group:insert(miniGroup)
 	local palette = display.newPickerColor(function(rgb)
@@ -502,8 +503,10 @@ local function selectColor_palette()
 	palette.x, palette.y = CENTER_X, palette.height*palette.yScale/2
 	miniGroup:insert(palette)
 	timer.performWithDelay(0, function ()
-		palette.y = CENTER_Y-((lineColor.y+lineColor.height+rect.width/6.5)-rect.y)/2+palette.height*palette.yScale/2
-		miniGroup.y = -group.y
+		if myMiniGroup.x ~= nil and palette.x ~= nil and group.y ~= nil then
+			palette.y = CENTER_Y-((lineColor.y+lineColor.height+rect.width/6.5)-rect.y)/2+palette.height*palette.yScale/2
+			myMiniGroup.y = -group.y
+		end
 	end)
 end
 --selectColor_palette()
@@ -514,9 +517,11 @@ local function selectColor_colors()
 	local function touchSetColor(event)
 		if (event.phase=="began") then
 			display.getCurrentStage():setFocus(event.target, event.id)
-		elseif (event.phase~="moved") then
-			color = event.target.myColor
-			rectColorNew:setFillColor(color[1],color[2],color[3])
+		elseif (event.phase=="ended" or event.phase=="cancelled") then
+			if (event.phase=="ended") then
+				color = event.target.myColor
+				rectColorNew:setFillColor(color[1],color[2],color[3])
+			end
 			display.getCurrentStage():setFocus(event.target, nil)
 		end
 		return(true)
@@ -559,8 +564,8 @@ group:insert(miniGroup2)
 local function touchTypeSelect(event)
 	if (event.phase=="began") then
 		display.getCurrentStage():setFocus(event.target, event.id)
-	elseif (event.phase~="moved") then
-		if (idTypeSelect~=event.target.id) then
+	elseif (event.phase=="ended" or event.phase=="cancelled") then
+		if (event.phase=="ended" and idTypeSelect~=event.target.id) then
 			transition.to(event.target.line, {yScale=2, time=100, transition=easing.outQuad})
 			transition.to(buttonsTypesSelectArray[idTypeSelect].line, {yScale=1, time=100, transition=easing.outQuad})
 			display.remove(miniGroup)
@@ -680,7 +685,6 @@ rectLight.height = rectGrey.height
 local function touchNoTouch(event)
 	if( event.phase == "ended") then
 		backgroundNoTouch:removeEventListener("touch", touchNoTouch)
-		backgroundNoTouch:addEventListener("touch", touchNoTouch)
 		transition.to(backgroundNoTouch, {time=150, alpha=0, onComplete=function ()
 			display.remove(backgroundNoTouch)
 		end})
@@ -730,6 +734,13 @@ local heightButton = (display.contentHeight+topBarArray[1].y-(scrollFormulas.y+s
 
 local isTimerSpam = false
 local timerSpam = nil
+local function cancelSpamTimer()
+	if isTimerSpam and timerSpam then
+		isTimerSpam = false
+		timer.cancel(timerSpam)
+		timerSpam = nil
+	end
+end
 local function touchButton(event)
 	if (event.phase=="began") then
 		event.target.alpha = 0.75
@@ -739,6 +750,7 @@ local function touchButton(event)
 			touchButtonNumber(event.target.functional)
 		end
 		if (event.target.isSpam==true) then
+			cancelSpamTimer()
 			isTimerSpam = true
 			timerSpam = timer.performWithDelay(450, function ()
 				timerSpam = timer.performWithDelay(50, function ()
@@ -751,11 +763,8 @@ local function touchButton(event)
 			end)
 		end
 		display.getCurrentStage():setFocus(event.target, event.id)
-	elseif (event.phase~="moved") then
-		if (isTimerSpam) then
-			isTimerSpam = false
-			timer.cancel(timerSpam)
-		end
+	elseif (event.phase=="ended" or event.phase=="cancelled") then
+		cancelSpamTimer()
 		event.target.alpha = 1
 		display.getCurrentStage():setFocus(event.target, nil)
 	end
@@ -785,6 +794,8 @@ end
 
 funBackObjects[1] = function ()
 if (isBackScene=="back" and isCorrectFormulas()~=nil) then
+	cancelSpamTimer()
+	native.setKeyboardFocus(nil)
 	objectsParameter[4].text = loadFormula(formulas)
 	funsP["записать сохранение"](app.idObject.."/scripts", plugins.json.encode(blocks))
 	funBack = oldSceneBack

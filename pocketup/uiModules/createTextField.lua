@@ -178,11 +178,11 @@ touchNoTouch = function(event)
         backgroundBlackAlpha:removeEventListener("touch",touchNoTouch)
         rect:removeEventListener("touch",touchNoTouch)
 
-        transition.to(backgroundBlackAlpha, {time=200, alpha=0, inComplete=function()
+        transition.to(backgroundBlackAlpha, {time=200, alpha=0, onComplete=function()
             display.remove(backgroundBlackAlpha)
         end})
         display.remove(input)
-        transition.to(group, {time=200, alpha=0, inComplete=function()
+        transition.to(group, {time=200, alpha=0, onComplete=function()
             display.remove(group)
         end})
 
@@ -233,7 +233,7 @@ input:addEventListener("userInput", function (event)
             textError.y = rectInput.y+rectInput.height+display.contentWidth/34
             updateHeightRect()
         end
-    elseif (event.pahse=="ended") then
+    elseif (event.phase=="ended") then
     end
 end)
 return(group)

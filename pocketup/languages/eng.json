@@ -672,6 +672,7 @@
     "Create this actor from spritesheet",
      "with width", "and height", "frames"/*674*/,"perlin noise",
 "Засыпание устройства","Задержка обнаружения касания","Удалить все клоны объекта","Каркасная отрисовка", "Video", "Change layer for",
-  "Play sound at number", "Set sound", "volume to"
+  "Play sound at number", "Set sound", "volume to",
+  "Set sound volume by number"/*685*/, "Set rotation speed", "degrees per second", "rotation speed"/*688*/
   ]
   

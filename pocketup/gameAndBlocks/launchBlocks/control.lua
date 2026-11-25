@@ -94,43 +94,18 @@ return {
 
     ["foreach"] = function(infoBlock, object, images, sounds, make_all_formulas)
         max_fors = max_fors + 1
-        if (infoBlock[2][1][2] == nil or infoBlock[2][2][2] == nil) then
-            infoBlock[2][1][2] = "nil"
-            infoBlock[2][2][2] = "nil"
-        end
+        local arrId = infoBlock[2][1][2] or "nil"
+        local varId = infoBlock[2][2][2] or "nil"
+        local arrPrefix = (infoBlock[2][1][1] == "globalArray") and "" or "target."
+        local varPrefix = (infoBlock[2][2][1] == "globalVariable") and "" or "target."
+        local varExpr = varPrefix .. "var_" .. varId
+        local textExpr = varPrefix .. "varText_" .. varId
         local lua = ''
-        lua = lua .. 'for key' .. max_fors .. ', value' .. max_fors .. ' in pairs('
-        lua = lua .. (infoBlock[2][1][1] == "globalArray" and "" or "target.") .. "list_" .. infoBlock[2][1][2] ..
-        ') do\n'
-        lua = lua ..
-        (infoBlock[2][2][1] == "globalVariable" and "" or "target.") ..
-        "var_" .. infoBlock[2][2][2] .. ' = value' .. max_fors .. '\n'
-        lua = lua ..
-        'if ' ..
-        (infoBlock[2][2][1] == "globalVariable" and "" or "target.") ..
-        "var_" ..
-        infoBlock[2][2][2] ..
-        ' then\n target.varText_' ..
-        infoBlock[2][1][2] ..
-        '.text = type(' ..
-        (infoBlock[2][2][1] == "globalVariable" and "" or "target.") ..
-        "var_" ..
-        infoBlock[2][2][2] ..
-        ")=='boolean' and (" ..
-        (infoBlock[2][2][1] == "globalVariable" and "" or "target.") ..
-        "var_" ..
-        infoBlock[2][2][2] ..
-        " and app.words[373] or app.words[374]) or type(" ..
-        (infoBlock[2][2][1] == "globalVariable" and "" or "target.") ..
-        "var_" ..
-        infoBlock[2][2][2] ..
-        ")=='table' and encodeList(" ..
-        (infoBlock[2][2][1] == "globalVariable" and "" or "target.") ..
-        "var_" ..
-        infoBlock[2][2][2] ..
-        ") or " .. (infoBlock[2][2][1] == "globalVariable" and "" or "target.") .. "var_" .. infoBlock[2][2][2] ..
-        '\nend'
-
+        lua = lua .. 'for key' .. max_fors .. ', value' .. max_fors .. ' in pairs(' .. arrPrefix .. 'list_' .. arrId .. ') do\n'
+        lua = lua .. varExpr .. ' = value' .. max_fors .. '\n'
+        lua = lua .. 'if ' .. textExpr .. ' then\n ' .. textExpr .. '.text = type(' .. varExpr .. ")==" .. "'boolean'" ..
+            ' and (' .. varExpr .. ' and app.words[373] or app.words[374]) or type(' .. varExpr .. ")==" .. "'table'" ..
+            ' and encodeList(' .. varExpr .. ') or ' .. varExpr .. '\nend'
         return lua
     end,
 
@@ -191,6 +166,7 @@ return {
         events_whenTheTruth = scene.events_whenTheTruth\
         playSounds = scene.playSounds\
         playingSounds = scene.playingSounds\
+        loadedSounds = scene.loadedSounds or loadedSounds\
         \
         joysticks = scene.joysticks\
         Timers = {}\
@@ -345,7 +321,7 @@ return {
             myClone.fill.effect.intensity = (target.property_brightness) / 100 - 1
             myClone.parent_obj = target.parent_obj or target
             target.parent_obj.clones[#target.parent_obj.clones + 1] = myClone
-            myClone.idClone = #target.parent_obj
+            myClone.idClone = #target.parent_obj.clones
             myClone.tableVarShow = {}
             myClone.origWidth = target.origWidth
             myClone.origHeight = target.origHeight
@@ -355,7 +331,7 @@ return {
             myClone.isVisible = target.isVisible
             myClone.physicsReload = target.physicsReload or function(ob) end
             myClone.physicsType = target.physicsType or 'static'
-            myClone.physicsTable = plugins.json.decode(plugins.json.encode(target.physicsTable)) or {}
+            myClone.physicsTable = target.physicsTable and utils.deepCopy(target.physicsTable) or {}
             myClone:physicsReload()
             myClone.property_color = target.property_color
             local r = pocketupFuns.sin(target.property_color - 22 + 56) / 2 + 0.724
@@ -375,18 +351,23 @@ return {
                 end
                 if not myClone.addEventListener then return 0 end
                 myClone:addEventListener('collision', function(event)
+                    if not (event.target and event.target.touchesObjects and event.other and event.other.parent_obj) then return end
                     if event.phase == 'began' then
                         event.target.touchesObjects['obj_' .. event.other.parent_obj.idObject] = true
                         timer.new(0, function()
-                            for i = 1, #myClone.parent_obj.events_collision do
-                                myClone.parent_obj.events_collision[i](event.target, event.other.parent_obj.nameObject)
+                            if event.target and event.target.x and event.other and event.other.parent_obj then
+                                for i = 1, #myClone.parent_obj.events_collision do
+                                    myClone.parent_obj.events_collision[i](event.target, event.other.parent_obj.nameObject)
+                                end
                             end
                         end)
                     elseif event.phase == 'ended' then
                         event.target.touchesObjects['obj_' .. event.other.parent_obj.idObject] = nil
                         timer.new(0, function()
-                            for i = 1, #myClone.parent_obj.events_endedCollision do
-                                myClone.parent_obj.events_endedCollision[i](event.target, event.other.parent_obj.nameObject)
+                            if event.target and event.target.x and event.other and event.other.parent_obj then
+                                for i = 1, #myClone.parent_obj.events_endedCollision do
+                                    myClone.parent_obj.events_endedCollision[i](event.target, event.other.parent_obj.nameObject)
+                                end
                             end
                         end)
                     end
@@ -406,10 +387,12 @@ return {
     ["deleteClone"] = function(infoBlock, object, images, sounds, make_all_formulas)
         local lua = "pcall(function()\n"
         lua = lua ..
-            "if (target) then\
-            table.remove(target.parent_obj.clones, target.idClone)\
-            for i=1, #target.parent_obj.clones do\
-                target.parent_obj.clones[i].idClone = i\
+            "if target then\
+            if target.idClone and target.idClone >= 1 then\
+                table.remove(target.parent_obj.clones, target.idClone)\
+                for i=1, #target.parent_obj.clones do\
+                    target.parent_obj.clones[i].idClone = i\
+                end\
             end\
             display.remove(target)\
         end"

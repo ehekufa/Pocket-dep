@@ -84,10 +84,10 @@ app.cerberus.newBannerQuestion = function(header, funEditingEnd, no, yes)
 			backgroundBlackAlpha:removeEventListener("touch",touchNoTouch)
 			rect:removeEventListener("touch",touchNoTouch)
 
-			transition.to(backgroundBlackAlpha, {time=200, alpha=0, inComplete=function()
+			transition.to(backgroundBlackAlpha, {time=200, alpha=0, onComplete=function()
 				display.remove(backgroundBlackAlpha)
 			end})
-			transition.to(group, {time=200, alpha=0, inComplete=function()
+			transition.to(group, {time=200, alpha=0, onComplete=function()
 				display.remove(group)
 			end})
 

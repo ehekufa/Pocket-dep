@@ -218,6 +218,6 @@ calculateGameFormulas = {
         dayWeek="tonumber(os.date('%w', os.time()))",day="tonumber(os.date('%d', os.time()))",hour="tonumber(os.date('%H', os.time()))",
         minute="tonumber(os.date('%M', os.time()))",second="tonumber(os.date('%S', os.time()))",
         json2array="pocketupFuns.jsonEncode", array2json="plugins.json.encode",positionCameraX="(cameraGroup.x)",
-        positionCameraY="(-cameraGroup.x)",myName="(target.myName==nil and 0 or target.myName)",mouseX="mouseX",mouseY="mouseY", perlinNoise = "pocketupFuns.perlinNoise",
-		rotationSpeed="target.angularVelocity"
+        positionCameraY="(-cameraGroup.y)",myName="(target.myName==nil and 0 or target.myName)",mouseX="mouseX",mouseY="mouseY", perlinNoise = "pocketupFuns.perlinNoise",
+		rotationSpeed="(target.angularVelocity or 0)"
 }

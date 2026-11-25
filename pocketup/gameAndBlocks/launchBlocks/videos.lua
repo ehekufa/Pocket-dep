@@ -28,7 +28,7 @@ return {
         end
     end,
     setPositionXVideo = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o, mainGroup, videos)
-        if (infoBlock[2][1][2]~=nil) then
+        if (infoBlock[2][2][2]~=nil) then
             local lua = "pcall(function()\n"
             lua = lua..'listVideos['..infoBlock[2][2][2]..'].x = '..make_all_formulas(infoBlock[2][1], object)..'\n'
             return lua .. "\nend)"
@@ -36,7 +36,7 @@ return {
         end
     end,
     setPositionYVideo = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o, mainGroup, videos)
-        if (infoBlock[2][1][2]~=nil) then
+        if (infoBlock[2][2][2]~=nil) then
             local lua = "pcall(function()\n"
             lua = lua..'listVideos['..infoBlock[2][2][2]..'].y = -'..make_all_formulas(infoBlock[2][1], object)..'\n'
             return lua .. "\nend)"
@@ -134,9 +134,6 @@ return {
         end
     end,
     whenTheTruth = function (infoBlock, object, images, sounds, make_all_formulas, obj_id, obj_path, scene_id, scene_path, options, o, mainGroup, videos)
-            local lua = "pcall(function()\n"
-            --lua = lua..'timer.performWithDelay(0, function())d'
-            print("hi")
-            return lua.."\nend)"
+            return ""
     end,
 }

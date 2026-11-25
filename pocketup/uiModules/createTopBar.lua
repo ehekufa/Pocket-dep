@@ -57,26 +57,28 @@ function topBar(group, idWord, onTouchMenu, onTouchCheck, onTouchBack, isHorizon
 	local function back(event)
 	if (event.phase=="began") then
 		transition.to(event.target.circleTouch, {alpha=0.25, xScale=1, yScale=1, time=100})
-	elseif (event.phase=="moved") then
+		display.getCurrentStage():setFocus(event.target, event.id)
+	elseif (event.phase=="moved" and (math.abs(event.x-event.xStart)>20 or math.abs(event.y-event.yStart)>20)) then
 		transition.to(event.target.circleTouch, {alpha=0, xScale=0.75, yScale=0.75, time=100})
-	else
+		display.getCurrentStage():setFocus(event.target, nil)
+	elseif (event.phase=="ended" or event.phase=="cancelled") then
 		transition.to(event.target.circleTouch, {alpha=0, xScale=0.75, yScale=0.75, time=100})
-
-
-		if (event.target==buttonBack) then
-			if (onTouchBack~=nil) then
-				onTouchBack[1]()
-			end
-		elseif (event.target==buttonCheck) then
-			if (onTouchCheck~=nil) then
-				onTouchCheck[1]()
-			end
-		else
-			if (onTouchMenu~=nil) then
-				onTouchMenu[1]()
+		display.getCurrentStage():setFocus(event.target, nil)
+		if (event.phase=="ended") then
+			if (event.target==buttonBack) then
+				if (onTouchBack~=nil) then
+					onTouchBack[1]()
+				end
+			elseif (event.target==buttonCheck) then
+				if (onTouchCheck~=nil) then
+					onTouchCheck[1]()
+				end
+			else
+				if (onTouchMenu~=nil) then
+					onTouchMenu[1]()
+				end
 			end
 		end
-
 	end
 	return(true)
 	end

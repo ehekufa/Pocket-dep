@@ -12,9 +12,12 @@ group.cells - список всех параметров блока;
 group.cells[i] - массив, содержащий в себе тип параметра и все объекты(кнопки, тексты и т. д.) от этого параметра;
 ]]
 
+local _animatesCache = {}
+local _sheetOptionsCache = {}
+
 function createBlock(block)
 	local infoBlock = allBlocks[block[1]]
-	if (allBlocks[block[1]]==nil) then
+	if (infoBlock==nil) then
 		infoBlock = {"block", "blocks/block_light_1.png", { {{"text", app.words[612]}} }, 109, 88, false}
 	end
 	local group = display.newGroup()
@@ -26,20 +29,28 @@ function createBlock(block)
 	image.anchorX = 0
 	group:insert(image)
 
-
-	local sheetOptions = {
-		width=1,
-		height=infoBlock[5],
-		numFrames=infoBlock[4],
-	}
-	local imageSheet = graphics.newImageSheet(infoBlock[2], sheetOptions)
-	local animates = {{
-		name="stand",
-		start=infoBlock[4],
-		count=1,
-		time=0,
-		loopCount=1,
-	}}
+	local optKey = tostring(infoBlock[5]).."x"..tostring(infoBlock[4])
+	local sheetOptions = _sheetOptionsCache[optKey]
+	if not sheetOptions then
+		sheetOptions = {
+			width=1,
+			height=infoBlock[5],
+			numFrames=infoBlock[4],
+		}
+		_sheetOptionsCache[optKey] = sheetOptions
+	end
+	local imageSheet = utils.getBlockImageSheet(infoBlock[2], sheetOptions)
+	local animates = _animatesCache[infoBlock[4]]
+	if not animates then
+		animates = {{
+			name="stand",
+			start=infoBlock[4],
+			count=1,
+			time=0,
+			loopCount=1,
+		}}
+		_animatesCache[infoBlock[4]] = animates
+	end
 
 	local sprite = display.newSprite(imageSheet, animates)
 	sprite.width = display.contentWidth-image.width*image.xScale
@@ -56,42 +67,47 @@ function createBlock(block)
 	local group2 = display.newGroup()
 	group:insert(group2)
 
-	if (infoBlock[2]:gsub("yellow", "")~= infoBlock[2]) then
+	if (infoBlock[2]:find("yellow", 1, true) ~= nil) then
 		sprite:setFillColor(0.85,0.85,0.75)
 		image:setFillColor(0.85,0.85,0.75)
 	end
+	local isLightBlock = infoBlock[2]:find("light_", 1, true) ~= nil
 
-	if (block[1]:gsub("paidBlock_", "") ~= block[1]) then
+	if (block[1]:find("paidBlock_", 1, true) ~= nil) then
 		local rect = display.newRoundedRect(-display.contentWidth/2.4, -sprite.height/2+display.contentWidth/17, 0, display.contentWidth/16, display.contentWidth/32)
 		group:insert(rect)
 		rect:setFillColor(0.25,0.75,0.4)
 		rect.strokeWidth = 2
 		rect:setStrokeColor(0.2, 0.6, 0.3)
-		local text = display.newText("25₽", rect.x, rect.y, fontSize1)
+		local text = display.newText("25₽", rect.x, rect.y, nil, app.fontSize1)
 		group:insert(text)
 		rect.width = text.width+rect.height
 	end
 
 	for i=1, #formulas do
 		for i2=1, #formulas[i] do
-			local formula = plugins.json.decode(plugins.json.encode(formulas[i][i2]))
+			local rawFormula = formulas[i][i2]
+			local formulaType = rawFormula[1]
+			local formulaVal
 
-			if (formula[1]~="text") then
+			if (formulaType~="text") then
 				countCells = countCells+1
-				formula[2] = block[2][countCells]
+				formulaVal = block[2] and block[2][countCells]
+			else
+				formulaVal = rawFormula[2]
 			end
 
-			if (formula[1]=="text") then
-				local header = display.newText(formula[2], xF, yF, "fonts/font_1.ttf", app.fontSizeBlock)
-				if (infoBlock[2]:gsub("light_", "")~=infoBlock[2]) then
+			if (formulaType=="text") then
+				local header = display.newText(formulaVal, xF, yF, "fonts/font_1.ttf", app.fontSizeBlock)
+				if isLightBlock then
 					header:setFillColor(0, 0, 0)
 				end
 				header.anchorX=0
 				group2:insert(header)
 				xF = header.x+header.width+display.contentWidth/30
-			elseif (formula[1]=="cell") then
+			elseif (formulaType=="cell") then
 				local button = display.newImage("images/notVisible.png")
-				button.width, button.height = display.contentWidth/10*formula[3], display.contentWidth/15
+				button.width, button.height = display.contentWidth/10*rawFormula[3], display.contentWidth/15
 				button.anchorX, button.x, button.y = 0, xF, yF
 				button.alpha = 0.5
 				group2:insert(button)
@@ -99,7 +115,7 @@ function createBlock(block)
 				line.anchorY=0
 				group2:insert(line)
 				local valueCell = display.newText({
-					text = loadFormula(formula[2]),
+					text = loadFormula(formulaVal or {}),
 					x = button.x+button.width/2,
 					y=button.y,
 					width=button.width,
@@ -114,7 +130,7 @@ function createBlock(block)
 				button.block = group
 				button.typeParameter = "cell"
 				xF = button.x+button.width+display.contentWidth/30
-			elseif (formula[1]=="function" or formula[1]=="objects" or formula[1]=="backgrounds" or formula[1]=="variables" or formula[1]=="arrays" or formula[1]=="scenes" or formula[1]=="scripts" or formula[1]=="goTo" or formula[1]=="typeRotate" or formula[1]=="sounds" or formula[1]=="images" or formula[1]=="effectParticle" or formula[1]=="onOrOff" or formula[1]=="alignText" or formula[1]=="isDeleteFile" or formula[1]=="typeBody" or formula[1]=="GL" or formula[1]=="inputType" or formula[1]=="videos") then
+			elseif (formulaType=="function" or formulaType=="objects" or formulaType=="backgrounds" or formulaType=="variables" or formulaType=="arrays" or formulaType=="scenes" or formulaType=="scripts" or formulaType=="goTo" or formulaType=="typeRotate" or formulaType=="sounds" or formulaType=="images" or formulaType=="effectParticle" or formulaType=="onOrOff" or formulaType=="alignText" or formulaType=="isDeleteFile" or formulaType=="typeBody" or formulaType=="GL" or formulaType=="inputType" or formulaType=="videos") then
 				yF = yF-display.contentWidth/40
 				local button = display.newImage("images/notVisible.png")
 				button.x, button.y, button.width, button.height = -display.screenOriginX+display.contentWidth/25, yF, display.contentWidth/2.625*2, display.contentWidth/15
@@ -124,141 +140,134 @@ function createBlock(block)
 				group2:insert(triangle)
 
 				local nameFunction = ""
-				if (formula[1]=="function") then
-					local namesFunctions = plugins.json.decode(funsP["получить сохранение"](app.idScene.."/functions"))
-					for i=1, #namesFunctions do
-						if (namesFunctions[i][1]==formula[2][2]) then
-							nameFunction = namesFunctions[i][2]
+				if (formulaType=="function") then
+					local namesFunctions = funsP["получить json"](app.idScene.."/functions")
+					for j=1, #namesFunctions do
+						if (namesFunctions[j][1]==formulaVal[2]) then
+							nameFunction = namesFunctions[j][2]
 							break
 						end
 					end
-				elseif (formula[1]=="objects") then
-					nameFunction = app.words[(block[1]=="collision" or block[1]=="endedCollision") and 85 or (block[1]=="clone" or block[1]~=block[1]:gsub("broadcastFun>","")) and 90 or 87]
-					local namesObjects = plugins.json.decode(funsP["получить сохранение"](app.idScene.."/objects"))
-					for i=1, #namesObjects do
-						if (namesObjects[i][2]==formula[2][2]) then
-							nameFunction = namesObjects[i][1]
+				elseif (formulaType=="objects") then
+					nameFunction = app.words[(block[1]=="collision" or block[1]=="endedCollision") and 85 or (block[1]=="clone" or block[1]:find("broadcastFun>", 1, true)~=nil) and 90 or 87]
+					local namesObjects = funsP["получить json"](app.idScene.."/objects")
+					for j=1, #namesObjects do
+						if (namesObjects[j][2]==formulaVal[2]) then
+							nameFunction = namesObjects[j][1]
 							break
 						end
 					end
 					if (nameFunction==nil) then
 						nameFunction = app.words[85]
 					end
-				elseif (formula[1]=="backgrounds") then
+				elseif (formulaType=="backgrounds") then
 					nameFunction = app.words[87]
-					local idBackgroundObject = plugins.json.decode(funsP["получить сохранение"](app.idScene.."/objects"))[1][2]
-					local namesBackgrounds = plugins.json.decode(funsP["получить сохранение"](app.idScene.."/object_"..idBackgroundObject.."/images"))
-					for i=1, #namesBackgrounds do
-						if (namesBackgrounds[i][2]==formula[2][2]) then
-							nameFunction = namesBackgrounds[i][1]
-							break
-						end
-					end
-				elseif (formula[1]=="variables") then
-					nameFunction = app.words[87]
-					local namesVariables = nil
-					if (formula[2][1]=="globalVariable") then 
-						namesVariables = plugins.json.decode(funsP["получить сохранение"](app.idProject.."/variables"))
-					else
-						namesVariables = plugins.json.decode(funsP["получить сохранение"](app.idObject.."/variables"))
-					end
-					for i=1, #namesVariables do
-						if (namesVariables[i][1]==formula[2][2]) then
-							nameFunction = namesVariables[i][2]
-						end
-					end
-				elseif (formula[1]=="arrays") then
-					nameFunction = app.words[87]
-					local namesArrays = nil
-					if (formula[2][1]=="globalArray") then 
-						namesArrays = plugins.json.decode(funsP["получить сохранение"](app.idProject.."/arrays"))
-					else
-						namesArrays = plugins.json.decode(funsP["получить сохранение"](app.idObject.."/arrays"))
-					end
-					for i=1, #namesArrays do
-						if (namesArrays[i][1]==formula[2][2]) then
-							nameFunction = namesArrays[i][2]
-						end
-					end
-				elseif (formula[1]=="scenes") then
-					nameFunction = app.words[87]
-					local namesScenes = plugins.json.decode(funsP["получить сохранение"](app.idProject.."/scenes"))
-					for i=1, #namesScenes do
-						if (namesScenes[i][2]==formula[2][2]) then
-							nameFunction = namesScenes[i][1]
-							break
-						end
-					end
-				elseif (formula[1]=="scripts") then
-					local namesScripts = {["thisScript"]=app.words[114], ["allScripts"]=app.words[115], ["otherScripts"]=app.words[116]}
-					nameFunction = namesScripts[formula[2][2]]
-				elseif (formula[1]=="goTo") then
-					if (formula[2][2]=="touch") then
-						nameFunction = app.words[123]
-					elseif (formula[2][2]=="random") then
-						nameFunction = app.words[124]
-					else
-						nameFunction = app.words[123]
-						local namesObjects = plugins.json.decode(funsP["получить сохранение"](app.idScene.."/objects"))
-						for i=1, #namesObjects do
-							if (namesObjects[i][2]==formula[2][2]) then
-								nameFunction = namesObjects[i][1]
+					local objsList = funsP["получить json"](app.idScene.."/objects")
+					local idBackgroundObject = objsList[1] and objsList[1][2]
+					if idBackgroundObject then
+						local namesBackgrounds = funsP["получить json"](app.idScene.."/object_"..idBackgroundObject.."/images")
+						for j=1, #namesBackgrounds do
+							if (namesBackgrounds[j][2]==formulaVal[2]) then
+								nameFunction = namesBackgrounds[j][1]
 								break
 							end
 						end
 					end
-				elseif (formula[1]=="typeRotate") then
+				elseif (formulaType=="variables") then
+					nameFunction = app.words[87]
+					local namesVariables = funsP["получить json"]((formulaVal[1]=="globalVariable" and app.idProject or app.idObject).."/variables")
+					for j=1, #namesVariables do
+						if (namesVariables[j][1]==formulaVal[2]) then
+							nameFunction = namesVariables[j][2]
+						end
+					end
+				elseif (formulaType=="arrays") then
+					nameFunction = app.words[87]
+					local namesArrays = funsP["получить json"]((formulaVal[1]=="globalArray" and app.idProject or app.idObject).."/arrays")
+					for j=1, #namesArrays do
+						if (namesArrays[j][1]==formulaVal[2]) then
+							nameFunction = namesArrays[j][2]
+						end
+					end
+				elseif (formulaType=="scenes") then
+					nameFunction = app.words[87]
+					local namesScenes = funsP["получить json"](app.idProject.."/scenes")
+					for j=1, #namesScenes do
+						if (namesScenes[j][2]==formulaVal[2]) then
+							nameFunction = namesScenes[j][1]
+							break
+						end
+					end
+				elseif (formulaType=="scripts") then
+					local namesScripts = {["thisScript"]=app.words[114], ["allScripts"]=app.words[115], ["otherScripts"]=app.words[116]}
+					nameFunction = namesScripts[formulaVal[2]]
+				elseif (formulaType=="goTo") then
+					if (formulaVal[2]=="touch") then
+						nameFunction = app.words[123]
+					elseif (formulaVal[2]=="random") then
+						nameFunction = app.words[124]
+					else
+						nameFunction = app.words[123]
+						local namesObjects = funsP["получить json"](app.idScene.."/objects")
+						for j=1, #namesObjects do
+							if (namesObjects[j][2]==formulaVal[2]) then
+								nameFunction = namesObjects[j][1]
+								break
+							end
+						end
+					end
+				elseif (formulaType=="typeRotate") then
 					local typesRotates = {
 						["leftToRight"] = app.words[133],
 						["true"] = app.words[134],
 						["false"] = app.words[135]
 					}
-					nameFunction = typesRotates[formula[2][2]]
-				elseif (formula[1]=="sounds") then
+					nameFunction = typesRotates[formulaVal[2]]
+				elseif (formulaType=="sounds") then
 					nameFunction = app.words[87]
-					local namesSounds = plugins.json.decode(funsP["получить сохранение"](app.idObject.."/sounds"))
-					for i=1, #namesSounds do
-						if (formula[2][2]==namesSounds[i][2]) then
-							nameFunction = namesSounds[i][1]
+					local namesSounds = funsP["получить json"](app.idObject.."/sounds")
+					for j=1, #namesSounds do
+						if (formulaVal[2]==namesSounds[j][2]) then
+							nameFunction = namesSounds[j][1]
 							break
 						end
 					end
-				elseif (formula[1]=="images") then
+				elseif (formulaType=="images") then
 					nameFunction = app.words[87]
-					local namesImages = plugins.json.decode(funsP["получить сохранение"](app.idObject.."/images"))
-					for i=1, #namesImages do
-						if (namesImages[i][2]==formula[2][2]) then
-							nameFunction = namesImages[i][1]
+					local namesImages = funsP["получить json"](app.idObject.."/images")
+					for j=1, #namesImages do
+						if (formulaVal[2]==namesImages[j][2]) then
+							nameFunction = namesImages[j][1]
 							break
 						end
 					end
-				elseif (formula[1]=="effectParticle") then
+				elseif (formulaType=="effectParticle") then
 					local typesParticles = {
 						["in"]=app.words[178],
 						["out"]=app.words[179],
 					}
-					nameFunction = typesParticles[formula[2][2]]
-				elseif (formula[1]=="onOrOff") then
-					nameFunction = formula[2][2]=="on" and app.words[183] or app.words[184]
-				elseif (formula[1]=="alignText") then
+					nameFunction = typesParticles[formulaVal[2]]
+				elseif (formulaType=="onOrOff") then
+					nameFunction = formulaVal[2]=="on" and app.words[183] or app.words[184]
+				elseif (formulaType=="alignText") then
 					local alignsText = {
 						["center"]=app.words[210],
 						["left"]=app.words[211],
 						["right"]=app.words[212],
 					}
-					nameFunction = alignsText[formula[2][2]]
-				elseif (formula[1]=="isDeleteFile") then
-					nameFunction = formula[2][2]=="save" and app.words[222] or app.words[223]
-				elseif (formula[1]=="typeBody") then
+					nameFunction = alignsText[formulaVal[2]]
+				elseif (formulaType=="isDeleteFile") then
+					nameFunction = formulaVal[2]=="save" and app.words[222] or app.words[223]
+				elseif (formulaType=="typeBody") then
 					local typesParticles = {
 						["dynamic"]=app.words[393],
 						["static"]=app.words[394],
 						["noPhysic"]=app.words[395],
 					}
-					nameFunction = typesParticles[formula[2][2]]
-				elseif (formula[1]=="GL") then
-					nameFunction = formula[2][2]
-				elseif (formula[1]=="inputType") then
+					nameFunction = typesParticles[formulaVal[2]]
+				elseif (formulaType=="GL") then
+					nameFunction = formulaVal[2]
+				elseif (formulaType=="inputType") then
 					local types = {
 						["default"] = app.words[498],
 						["number"] = app.words[499],
@@ -268,14 +277,13 @@ function createBlock(block)
 						["email"] = app.words[503],
 						["no-emoji"] = app.words[504],
 					}
-					print(plugins.json.encode(formula))
-					nameFunction = types[formula[2][2]]
-				elseif (formula[1]=="videos") then
+					nameFunction = types[formulaVal[2]]
+				elseif (formulaType=="videos") then
 					nameFunction = app.words[87]
-					local namesVideos = plugins.json.decode(funsP["получить сохранение"](app.idObject.."/videos"))
-					for i=1, #namesVideos do
-						if (formula[2][2]==namesVideos[i][2]) then
-							nameFunction = namesVideos[i][1]
+					local namesVideos = funsP["получить json"](app.idObject.."/videos")
+					for j=1, #namesVideos do
+						if (formulaVal[2]==namesVideos[j][2]) then
+							nameFunction = namesVideos[j][1]
 							break
 						end
 					end
@@ -286,10 +294,10 @@ function createBlock(block)
 				group2:insert(header)
 				group.cells[#group.cells+1] = {"function", button, header, triangle}
 				button.idParameter = #group.cells
-				button.typeParameter = formula[1]
+				button.typeParameter = formulaType
 				button.block = group
 				yF = yF-display.contentWidth/40
-			elseif (formula[1]=="shapeHitbox") then
+			elseif (formulaType=="shapeHitbox") then
 				local button = display.newImage("images/notVisible.png")
 				button.x, button.y, button.width, button.height = -display.screenOriginX+display.contentWidth/25, yF, display.contentWidth/2.625*2, display.contentWidth/15
 				group2:insert(button)
@@ -297,7 +305,7 @@ function createBlock(block)
 				line.anchorY=0
 				group2:insert(line)
 				local valueCell = display.newText({
-					text = formula[2][2],
+					text = formulaVal[2],
 					x = button.x,
 					y=button.y,
 					width=button.width,
@@ -312,7 +320,6 @@ function createBlock(block)
 				button.block = group
 				button.typeParameter = "shapeHitbox"
 				yF = yF-display.contentWidth/40
-			
 			end -- elseif
 		end
 		yF = yF + display.contentWidth/10

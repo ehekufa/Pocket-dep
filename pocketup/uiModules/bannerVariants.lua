@@ -21,7 +21,7 @@ app.cerberus.newVatiants = function (variants, onComplete)
 		elseif (event.phase=="moved" and (math.abs(event.x-event.xStart)>20 or math.abs(event.y-event.yStart)>20)) then
 			event.target:setFillColor(66/255, 66/255, 66/255)
 			scroll:takeFocus(event)
-		elseif (event.phase~="moved") then
+		elseif (event.phase=="ended" or event.phase=="cancelled") then
 			event.target:setFillColor(66/255, 66/255, 66/255)
 
 			for i=1, #variants do
@@ -29,15 +29,15 @@ app.cerberus.newVatiants = function (variants, onComplete)
 			end
 			rect:removeEventListener("touch", touchBackground)
 			backgroundBlackAlpha:removeEventListener("touch", touchBackground)
-			transition.to(backgroundBlackAlpha, {time=200, alpha=0, inComplete=function()
+			transition.to(backgroundBlackAlpha, {time=200, alpha=0, onComplete=function()
 				display.remove(backgroundBlackAlpha)
 			end})
-			transition.to(group, {time=200, alpha=0, inComplete=function()
+			transition.to(group, {time=200, alpha=0, onComplete=function()
 				display.remove(group)
 			end})
 
 			if (onComplete~=nil) then
-				onComplete(event.target.id)
+				onComplete(event.phase=="ended" and event.target.id or nil)
 			end
 
 		end
@@ -52,7 +52,7 @@ app.cerberus.newVatiants = function (variants, onComplete)
 			x=button.x,
 			y=button.y,
 			width=display.contentWidth/1.16-(display.contentWidth-display.contentWidth/1.16),
-			fontSise=app.fontSize1,
+			fontSize=app.fontSize1,
 		})
 		group:insert(text)
 		buttons[i] = button
@@ -71,10 +71,10 @@ app.cerberus.newVatiants = function (variants, onComplete)
 			end
 			rect:removeEventListener("touch", touchBackground)
 			backgroundBlackAlpha:removeEventListener("touch", touchBackground)
-			transition.to(backgroundBlackAlpha, {time=200, alpha=0, inComplete=function()
+			transition.to(backgroundBlackAlpha, {time=200, alpha=0, onComplete=function()
 				display.remove(backgroundBlackAlpha)
 			end})
-			transition.to(group, {time=200, alpha=0, inComplete=function()
+			transition.to(group, {time=200, alpha=0, onComplete=function()
 				display.remove(group)
 			end})
 

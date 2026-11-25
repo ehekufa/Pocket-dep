@@ -43,7 +43,6 @@ return {
         local code = make_all_formulas(infoBlock[2][1], object)
         
         lua = lua..'pcall(function()\nloadstring('..code..')()\nend)\n'
-        print(lua)
         return lua.."\nend)"
     end,
 

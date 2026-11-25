@@ -40,12 +40,13 @@ local OS_COPY = function(link, link2)
 end
 
 if IS_SIM or IS_WIN then
-    FILEPICKER = require 'plugin.tinyfiledialogs'
+    local FILEPICKER = require 'plugin.tinyfiledialogs'
     EXPORTFILE.export = function(config)
         pcall(function ()
-        local path, listener, name = config.path, config.listener, config.name
-        local pathToFile = FILEPICKER.saveFileDialog({})
-        if path then OS_COPY(path, pathToFile) end listener()          
+            local path, listener, name = config.path, config.listener, config.name
+            local pathToFile = FILEPICKER.saveFileDialog({})
+            if path and pathToFile then OS_COPY(path, pathToFile) end
+            if listener then listener() end
         end)
     end
 end

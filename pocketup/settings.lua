@@ -7,6 +7,9 @@ app.scene = 'null'
 _G.plugins = {}
 _G.utils = {}
 
+utils.isWin = system.getInfo 'platform' ~= 'android'
+utils.isSim = system.getInfo 'environment' == 'simulator'
+
 plugins.utf8 = require( "plugin.utf8" )
 plugins.utf8.split = function(text, sep) local result = {} for s in text:gmatch('[^' .. sep .. ']+') do result[#result + 1] = s end return result end
 plugins.json = require("json")
@@ -32,15 +35,43 @@ app.words = require("pocketup.modules.loadLanguage")
 display.setDefault( 'minTextureFilter', 'nearest' )
 display.setDefault( 'magTextureFilter', 'nearest' )
 
+function utils.deepCopy(orig)
+    if type(orig) ~= "table" then
+        return orig
+    end
+    local copy = {}
+    for k, v in pairs(orig) do
+        copy[k] = (type(v) == "table") and utils.deepCopy(v) or v
+    end
+    return copy
+end
+
+utils._blockImageSheets = {}
+function utils.getBlockImageSheet(imagePath, options)
+    local key = imagePath .. "|" .. tostring(options.width) .. "x" .. tostring(options.height) .. "x" .. tostring(options.numFrames)
+    local sheet = utils._blockImageSheets[key]
+    if not sheet then
+        sheet = graphics.newImageSheet(imagePath, options)
+        utils._blockImageSheets[key] = sheet
+    end
+    return sheet
+end
+
 os.removeFolder = function (path, isremove)
+    if type(path) ~= "string" then
+        return
+    end
+    local rootAttr = plugins.lfs.attributes(path)
+    if not rootAttr or rootAttr.mode ~= "directory" then
+        return
+    end
+    local sep = utils.isWin and "\\" or "/"
     for file in plugins.lfs.dir(path) do
         if file ~= "." and file ~= ".." then
-            local filePath = path.."/"..file
+            local filePath = path .. sep .. file
             local attr = plugins.lfs.attributes(filePath)
-            if (attr~=nil) then
+            if attr ~= nil then
                 if attr.mode == "directory" then
-                    filePath = path.."\\"..file
-                    --print(filePath)
                     os.removeFolder(filePath)
                 else
                     os.remove(filePath)
@@ -49,37 +80,55 @@ os.removeFolder = function (path, isremove)
         end
     end
     if not isremove then
-    plugins.lfs.rmdir(path)
+        plugins.lfs.rmdir(path)
     end
 end
 
 os.copy = function(link, link2)
-    if utils.isWin or utils.isSim then
-        link = plugins.utf8.gsub(link, '/', '\\')
-        link2 = plugins.utf8.gsub(link2, '/', '\\')
+    if type(link) ~= "string" or type(link2) ~= "string" then
+        return false
     end
-    os.execute('copy /y "' .. link .. '" "' .. link2 .. '"')
+    local src = io.open(link, "rb")
+    if not src then
+        return false
+    end
+    local dst = io.open(link2, "wb")
+    if not dst then
+        io.close(src)
+        return false
+    end
+    while true do
+        local chunk = src:read(65536)
+        if not chunk then
+            break
+        end
+        dst:write(chunk)
+    end
+    io.close(src)
+    io.close(dst)
+    return true
 end
 
 function os.copy_folder(path, path2, isCreate2)
     if not isCreate2 then
         plugins.lfs.mkdir(path2)
     end
+    local rootAttr = plugins.lfs.attributes(path)
+    if not rootAttr or rootAttr.mode ~= "directory" then
+        return
+    end
     for file in plugins.lfs.dir(path) do
         if file ~= "." and file ~= ".." then
             local filePath = path.."/"..file
             local attr = plugins.lfs.attributes(filePath)
-            if attr.mode == "directory" then
+            if attr and attr.mode == "directory" then
                 os.copy_folder(filePath, path2..'/'..file)
-            else
+            elseif attr then
                 os.copy(filePath, path2..'/'..file)
             end
         end
     end
 end
-
-utils.isWin = system.getInfo 'platform' ~= 'android'
-utils.isSim = system.getInfo 'environment' == 'simulator'
 
 _G.display = display
 _G.system = system
@@ -98,7 +147,10 @@ os.write = function (value , path , basedir)
     if basedir then
         link = system.pathForFile(path , basedir)
     end
-    local file = io.open(link , 'w')
+    local file = io.open(link , 'wb')
+    if not file then
+        return false
+    end
     file:write(value)
     file:close()
 end
@@ -114,7 +166,10 @@ os.read = function (path , mode , basedir)
     if basedir then
         link = system.pathForFile(path , basedir)
     end
-    local file = io.open(link , 'r+')
+    local file = io.open(link , 'rb')
+    if not file then
+        return nil
+    end
     local value = file:read(mode)
     file:close()
     return value
@@ -165,19 +220,6 @@ app.roundedRect = app.fontSize1/8
 
 
 utils.select_Scroll = ''
-local function moveScroll(event)
-	-- if event.type == 'scroll' and type(utils.select_Scroll)~='string' then
-	-- 	local x, y = utils.select_Scroll:getContentPosition()
-	-- 	if (event.scrollY > 0 and (y + (event.scrollY /2)) <0) or (event.scrollY < 0)  then
-	-- 		utils.select_Scroll:scrollToPosition({
-	-- 			y = y + (event.scrollY),
-	-- 			time = 0
-	-- 		})
-	-- 	end
-	-- 	return true
-	-- end
-end
-Runtime:addEventListener("mouse", moveScroll)
 
 function string:split(delimiter)
     local result = { }

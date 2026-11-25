@@ -13,18 +13,10 @@
 
 
 function utils.isCorrectHex(value)
-	if(string.len(value)==7) then
-	value = string.gsub(value, "#","")
+	if(type(value)=="string" and string.len(value)==7) then
+	value = string.upper(string.gsub(value, "#",""))
 		if (string.len(value)==6) then
-			local tableSymbols = {0,1,2,3,4,5,6,7,8,9,"E","A","D","F","C","B"}
-			for i=1, #tableSymbols do
-				value = string.gsub(value, tableSymbols[i], "")
-			end
-			if (string.len(value)==0) then
-				return(true)
-			else
-				return(false)
-			end
+			return value:match("^[0-9A-F]+$") ~= nil
 		else
 			return(false)
 		end
@@ -155,19 +147,9 @@ end
 
 function utils.rgbToHex(rgb)
 	local hexadecimal = '#'
-	for key, value in pairs(rgb) do
-		local hex = ''
-		while(value > 0)do
-			local index = math.fmod(value, 16) + 1
-			value = math.floor(value / 16)
-			hex = string.sub('0123456789ABCDEF', index, index) .. hex
-		end
-		if(string.len(hex) == 0)then
-			hex = '00'
-		elseif(string.len(hex) == 1)then
-			hex = '0' .. hex
-		end
-		hexadecimal = hexadecimal .. hex
+	for _, rawVal in ipairs(rgb) do
+		local value = math.min(255, math.max(0, math.round(rawVal)))
+		hexadecimal = hexadecimal .. string.format('%02X', value)
 	end
 	return hexadecimal
 end
