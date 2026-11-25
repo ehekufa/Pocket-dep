@@ -1,4 +1,4 @@
-# Pocket Up Source Code
+# Pocket Dep Source Code
 
 Contains editor, menu, and some other parts.
 
@@ -8,4 +8,4 @@ Roadmap:<br>
 ✅ Expression evaulator<br>
 ✅ Project simlulation<br>
 ⛔ Community website<br>
-⛔ Builder (apk, aab, and exe)
+✅ Builder (apk, aab, and exe)
