@@ -26,7 +26,7 @@ on:
 
 jobs:
   build-android-apk:
-    runs-on: macos-15
+    runs-on: windows-latest
     timeout-minutes: 45
 
     steps:
@@ -41,134 +41,148 @@ jobs:
 
       - name: Resolve Solar2D release metadata
         id: solar2d_meta
+        shell: pwsh
         run: |
-          set -euo pipefail
-          FALLBACK_TAG="3737"
-          FALLBACK_URL="https://github.com/coronalabs/corona/releases/download/3737/Solar2D-macOS-2026.3737.dmg"
-          META_JSON="$(curl -fsSL -H 'Accept: application/vnd.github+json' https://api.github.com/repos/coronalabs/corona/releases/latest || true)"
-          if [ -n "$META_JSON" ]; then
-            TAG="$(printf '%s' "$META_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("tag_name",""))' || true)"
-            DMG_URL="$(printf '%s' "$META_JSON" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(next((a["browser_download_url"] for a in d.get("assets",[]) if a["name"].startswith("Solar2D-macOS-") and a["name"].endswith(".dmg")), ""))' || true)"
-          else
-            TAG=""
-            DMG_URL=""
-          fi
-          if [ -z "$TAG" ] || [ -z "$DMG_URL" ]; then
-            TAG="$FALLBACK_TAG"
-            DMG_URL="$FALLBACK_URL"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "dmg_url=$DMG_URL" >> "$GITHUB_OUTPUT"
-          echo "Resolved Solar2D tag=$TAG url=$DMG_URL"
+          $ErrorActionPreference = "Stop"
+          $fallbackTag = "3737"
+          $fallbackUrl = "https://github.com/coronalabs/corona/releases/download/3737/Solar2D-Windows-2026.3737.msi"
+          $tag = ""
+          $msiUrl = ""
+          try {
+            $resp = Invoke-RestMethod -Uri "https://api.github.com/repos/coronalabs/corona/releases/latest" -Headers @{ Accept = "application/vnd.github+json" } -TimeoutSec 20
+            $tag = [string]$resp.tag_name
+            $asset = $resp.assets | Where-Object { $_.name -like "Solar2D-Windows-*.msi" } | Select-Object -First 1
+            if ($asset) { $msiUrl = [string]$asset.browser_download_url }
+          } catch {
+            Write-Warning "Failed to query latest Solar2D release API: $_"
+          }
+          if ([string]::IsNullOrWhiteSpace($tag) -or [string]::IsNullOrWhiteSpace($msiUrl)) {
+            $tag = $fallbackTag
+            $msiUrl = $fallbackUrl
+          }
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "msi_url=$msiUrl" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Resolved Solar2D tag=$tag url=$msiUrl"
 
-      - name: Cache Solar2D DMG
-        id: cache_dmg
+      - name: Cache Solar2D Windows MSI
+        id: cache_msi
         uses: actions/cache@v4
         with:
-          path: ~/solar2d-cache
-          key: solar2d-macos-${{ steps.solar2d_meta.outputs.tag }}
+          path: ~/solar2d-win-cache
+          key: solar2d-win-${{ steps.solar2d_meta.outputs.tag }}
 
-      - name: Download and install Solar2D
+      - name: Download and extract Solar2D
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p "$HOME/solar2d-cache" "$HOME/Solar2D"
-          DMG_PATH="$HOME/solar2d-cache/Solar2D-${{ steps.solar2d_meta.outputs.tag }}.dmg"
-          if [ ! -s "$DMG_PATH" ]; then
-            curl -fL --retry 3 --retry-delay 5 -o "$DMG_PATH" "${{ steps.solar2d_meta.outputs.dmg_url }}"
-          fi
+          $ErrorActionPreference = "Stop"
+          $cacheDir = Join-Path $env:USERPROFILE "solar2d-win-cache"
+          $extractDir = Join-Path $env:RUNNER_TEMP "solar2d-extracted"
+          New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+          if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
 
-          MOUNT_POINT="$(mktemp -d /tmp/solar2d-mnt.XXXXXX)"
-          cleanup() {
-            hdiutil detach "$MOUNT_POINT" -force >/dev/null 2>&1 || true
-            rm -rf "$MOUNT_POINT"
+          $msiPath = Join-Path $cacheDir "Solar2D-${{ steps.solar2d_meta.outputs.tag }}.msi"
+          if (-not (Test-Path $msiPath) -or ((Get-Item $msiPath).Length -eq 0)) {
+            Write-Host "Downloading Solar2D MSI from ${{ steps.solar2d_meta.outputs.msi_url }}"
+            curl.exe -fL --retry 3 --retry-delay 5 -o "$msiPath" "${{ steps.solar2d_meta.outputs.msi_url }}"
+            if ($LASTEXITCODE -ne 0) { throw "Failed to download Solar2D MSI" }
           }
-          trap cleanup EXIT
 
-          yes | hdiutil attach -nobrowse -readonly -mountpoint "$MOUNT_POINT" "$DMG_PATH"
+          $proc = Start-Process -FilePath "msiexec.exe" -ArgumentList @("/a", $msiPath, "/qn", "TARGETDIR=$extractDir") -Wait -PassThru -NoNewWindow
+          if ($proc.ExitCode -ne 0) {
+            throw "msiexec administrative extraction failed with exit code $($proc.ExitCode)"
+          }
 
-          SIM_APP="$(find "$MOUNT_POINT" -maxdepth 3 -name 'Corona Simulator.app' -print -quit)"
-          if [ -z "$SIM_APP" ]; then
-            echo "::error::Could not locate Corona Simulator.app inside mounted DMG"
-            find "$MOUNT_POINT" -maxdepth 3
-            exit 1
-          fi
-          SOLAR2D_SRC="$(dirname "$SIM_APP")"
-          ditto "$SOLAR2D_SRC" "$HOME/Solar2D"
-          xattr -cr "$HOME/Solar2D" >/dev/null 2>&1 || true
+          $sevenZip = Get-ChildItem -Path $extractDir -Filter "7za.exe" -Recurse | Select-Object -First 1
+          if (-not $sevenZip) { throw "Could not find 7za.exe in extracted Solar2D directory" }
+          $coronaPath = $sevenZip.DirectoryName
 
-          CORONA_BUILDER="$(find "$HOME/Solar2D" -path '*/Contents/MacOS/CoronaBuilder' -type f -print -quit)"
-          NATIVE_DIR="$(find "$HOME/Solar2D" -maxdepth 3 -name 'Native' -type d -print -quit)"
-          if [ -z "$CORONA_BUILDER" ] || [ -z "$NATIVE_DIR" ]; then
-            echo "::error::Missing CoronaBuilder ($CORONA_BUILDER) or Native ($NATIVE_DIR)"
-            find "$HOME/Solar2D" -maxdepth 4
-            exit 1
-          fi
+          $coronaBuilder = Get-ChildItem -Path $coronaPath -Filter "CoronaBuilder.exe" -Recurse | Select-Object -First 1
+          $luacExe = Get-ChildItem -Path $coronaPath -Filter "luac.exe" -Recurse | Select-Object -First 1
+          if (-not $coronaBuilder -or -not $luacExe) {
+            throw "Could not find CoronaBuilder.exe or luac.exe under $coronaPath"
+          }
 
-          mkdir -p "$HOME/Library/Application Support/Corona"
-          ln -sfn "$NATIVE_DIR" "$HOME/Library/Application Support/Corona/Native"
+          # Ensure CoronaBuilder uses Java 17 from actions/setup-java instead of any older bundled JRE
+          $bundledJre = Join-Path $coronaPath "jre"
+          if (Test-Path $bundledJre) { Remove-Item -Recurse -Force $bundledJre }
+          New-Item -ItemType Junction -Path $bundledJre -Target $env:JAVA_HOME | Out-Null
 
-          echo "CORONA_BUILDER=$CORONA_BUILDER" >> "$GITHUB_ENV"
-          echo "SOLAR2D_NATIVE_DIR=$NATIVE_DIR" >> "$GITHUB_ENV"
-          "$CORONA_BUILDER" version || true
+          "CORONA_PATH=$coronaPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CORONA_BUILDER=$($coronaBuilder.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CORONA_LUAC=$($luacExe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          Write-Host "CORONA_PATH=$coronaPath"
+          Write-Host "CORONA_BUILDER=$($coronaBuilder.FullName)"
+          & $coronaBuilder.FullName version
 
       - name: Verify Lua bytecode syntax with Solar2D luac
+        shell: pwsh
         run: |
-          set -euo pipefail
-          LUAC_BIN="$(find "$SOLAR2D_NATIVE_DIR" -name 'luac' -type f -print -quit)"
-          if [ -z "$LUAC_BIN" ]; then
-            echo "::warning::Solar2D luac not found under $SOLAR2D_NATIVE_DIR; skipping luac check"
-            exit 0
-          fi
-          find . -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 "$LUAC_BIN" -p
-          echo "All Lua files passed syntax check via $LUAC_BIN"
+          $ErrorActionPreference = "Stop"
+          $luaFiles = Get-ChildItem -Path . -Filter "*.lua" -Recurse -File | Where-Object { $_.FullName -notmatch '\\\.git\\' }
+          foreach ($f in $luaFiles) {
+            & $env:CORONA_LUAC -p $f.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "luac syntax check failed for $($f.FullName)"
+            }
+          }
+          Write-Host "All $($luaFiles.Count) Lua files passed syntax check."
 
-      - name: Prepare Android SDK environment
+      - name: Prepare Android SDK link and licenses
+        shell: pwsh
         run: |
-          set -euo pipefail
-          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
-          if [ ! -d "$SDK_DIR" ]; then
-            echo "::error::Android SDK directory not found: $SDK_DIR"
-            exit 1
-          fi
-          export ANDROID_HOME="$SDK_DIR"
-          export ANDROID_SDK_ROOT="$SDK_DIR"
-          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
-          SDKMANAGER="$(find "$SDK_DIR/cmdline-tools" -name 'sdkmanager' -type f -print -quit 2>/dev/null || true)"
-          if [ -n "$SDKMANAGER" ]; then
-            yes | "$SDKMANAGER" --sdk_root="$SDK_DIR" --licenses >/dev/null 2>&1 || true
-          fi
+          $ErrorActionPreference = "Stop"
+          $sdkDir = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { "C:\Android\android-sdk" }
+          if (-not (Test-Path $sdkDir)) {
+            throw "Android SDK directory not found: $sdkDir"
+          }
+          "ANDROID_HOME=$sdkDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ANDROID_SDK_ROOT=$sdkDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          $sdkManager = Get-ChildItem -Path (Join-Path $sdkDir "cmdline-tools") -Filter "sdkmanager.bat" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($sdkManager) {
+            cmd /c "for /L %i in (1,1,20) do @echo y" | & $sdkManager.FullName "--sdk_root=$sdkDir" --licenses *> $null
+            $global:LASTEXITCODE = 0
+          }
+
+          # Point Solar2D Windows setup.bat SDK location to the runner's preinstalled Android SDK
+          $coronaSdkLink = Join-Path $env:APPDATA "Corona Labs\Corona Simulator\Android Build\sdk"
+          New-Item -ItemType Directory -Force -Path (Split-Path $coronaSdkLink) | Out-Null
+          if (Test-Path $coronaSdkLink) { Remove-Item -Recurse -Force $coronaSdkLink }
+          New-Item -ItemType Junction -Path $coronaSdkLink -Target $sdkDir | Out-Null
 
       - name: Stage project and decode optional signing keystore
         id: stage
+        shell: pwsh
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          set -euo pipefail
-          STAGE_DIR="$RUNNER_TEMP/pocketup-src"
-          OUT_DIR="$RUNNER_TEMP/pocketup-out"
-          rm -rf "$STAGE_DIR" "$OUT_DIR"
-          mkdir -p "$STAGE_DIR" "$OUT_DIR"
+          $ErrorActionPreference = "Stop"
+          $stageDir = Join-Path $env:RUNNER_TEMP "pocketup-src"
+          $outDir = Join-Path $env:RUNNER_TEMP "pocketup-out"
+          if (Test-Path $stageDir) { Remove-Item -Recurse -Force $stageDir }
+          if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
+          New-Item -ItemType Directory -Force -Path $stageDir, $outDir | Out-Null
 
-          rsync -a \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='Images.xcassets/' \
-            --exclude='LaunchScreen.storyboardc/' \
-            ./ "$STAGE_DIR/"
+          robocopy . "$stageDir" /E /XD .git .github Images.xcassets LaunchScreen.storyboardc /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
+          if ($LASTEXITCODE -ge 8) {
+            throw "robocopy failed with exit code $LASTEXITCODE"
+          }
+          $global:LASTEXITCODE = 0
 
-          echo "project_dir=$STAGE_DIR" >> "$GITHUB_OUTPUT"
-          echo "output_dir=$OUT_DIR" >> "$GITHUB_OUTPUT"
+          "project_dir=$stageDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "output_dir=$outDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
-          if [ -n "${KEYSTORE_B64:-}" ]; then
-            KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
-            printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_PATH"
-            echo "keystore_path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
-          else
-            echo "keystore_path=" >> "$GITHUB_OUTPUT"
-          fi
+          if (-not [string]::IsNullOrWhiteSpace($env:KEYSTORE_B64)) {
+            $keystorePath = Join-Path $env:RUNNER_TEMP "release.keystore"
+            [System.IO.File]::WriteAllBytes($keystorePath, [System.Convert]::FromBase64String($env:KEYSTORE_B64))
+            "keystore_path=$keystorePath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            "keystore_path=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
 
       - name: Build Android APK with CoronaBuilder
+        shell: pwsh
         env:
           DEBUG_BUILD_PROCESS: "1"
           APP_NAME: ${{ inputs.app_name || 'PocketUp' }}
@@ -182,19 +196,22 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_ALIAS_PASSWORD: ${{ secrets.ANDROID_KEY_ALIAS_PASSWORD }}
         run: |
-          set -euo pipefail
-          PARAMS_LUA="$RUNNER_TEMP/build_params.lua"
-          cat > "$PARAMS_LUA" <<'EOF'
+          $ErrorActionPreference = "Stop"
+          $paramsLua = Join-Path $env:RUNNER_TEMP "build_params.lua"
+          @'
+          local function normPath(p)
+              return p and p:gsub("\\", "/") or nil
+          end
           local params = {
               platform = "android",
               appName = os.getenv("APP_NAME") or "PocketUp",
               appVersion = os.getenv("APP_VERSION") or "1.0.0",
               androidVersionCode = tonumber(os.getenv("ANDROID_VERSION_CODE")) or 1,
               androidAppPackage = os.getenv("ANDROID_PACKAGE") or "com.pocketup.app",
-              projectPath = os.getenv("PROJECT_PATH"),
-              dstPath = os.getenv("DST_PATH"),
+              projectPath = normPath(os.getenv("PROJECT_PATH")),
+              dstPath = normPath(os.getenv("DST_PATH")),
           }
-          local cert = os.getenv("ANDROID_KEYSTORE_PATH")
+          local cert = normPath(os.getenv("ANDROID_KEYSTORE_PATH"))
           if cert and cert ~= "" then
               params.certificatePath = cert
               params.keystorePassword = os.getenv("ANDROID_KEYSTORE_PASSWORD") or ""
@@ -202,29 +219,51 @@ jobs:
               params.keystoreAliasPassword = os.getenv("ANDROID_KEY_ALIAS_PASSWORD") or ""
           end
           return params
-          EOF
+          '@ | Set-Content -Path $paramsLua -Encoding utf8NoBOM
 
-          "$CORONA_BUILDER" build --lua "$PARAMS_LUA"
+          & $env:CORONA_BUILDER build --lua $paramsLua
+          if ($LASTEXITCODE -ne 0) {
+            throw "CoronaBuilder exited with code $LASTEXITCODE"
+          }
 
       - name: Verify generated APK
+        shell: pwsh
         run: |
-          set -euo pipefail
-          OUT_DIR="${{ steps.stage.outputs.output_dir }}"
-          ls -lh "$OUT_DIR"
-          APK_FILE="$(find "$OUT_DIR" -maxdepth 1 -name '*.apk' -print -quit)"
-          if [ -z "$APK_FILE" ] || [ ! -s "$APK_FILE" ]; then
-            echo "::error::Expected .apk output was not generated in $OUT_DIR"
-            exit 1
-          fi
+          $ErrorActionPreference = "Stop"
+          $outDir = "${{ steps.stage.outputs.output_dir }}"
+          Get-ChildItem -Path $outDir | Format-Table Name, Length
+          $apk = Get-ChildItem -Path $outDir -Filter "*.apk" | Select-Object -First 1
+          if (-not $apk -or $apk.Length -le 0) {
+            throw "Expected .apk output was not generated in $outDir"
+          }
 
-          # Check essential APK structure
-          unzip -l "$APK_FILE" | grep -E "AndroidManifest\.xml|classes.*\.dex|assets/resource\.car|lib/.*/libcorona\.so"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($apk.FullName)
+          try {
+            $names = $zip.Entries | ForEach-Object { $_.FullName }
+            foreach ($required in @("AndroidManifest.xml", "assets/resource.car")) {
+              if ($names -notcontains $required) {
+                throw "Missing required APK entry: $required"
+              }
+            }
+            if (-not ($names | Where-Object { $_ -match '^classes\d*\.dex$' })) {
+              throw "Missing classes*.dex in APK"
+            }
+            if (-not ($names | Where-Object { $_ -match '^lib/.+/libcorona\.so$' })) {
+              throw "Missing native libcorona.so in APK"
+            }
+            Write-Host "Verified essential APK contents inside $($apk.Name) ($($apk.Length) bytes)."
+          } finally {
+            $zip.Dispose()
+          }
 
-          # Verify APK signature with apksigner if present
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name 'apksigner' -type f 2>/dev/null | sort -V | tail -n1 || true)"
-          if [ -n "$APKSIGNER" ]; then
-            "$APKSIGNER" verify --print-certs "$APK_FILE"
-          fi
+          $apksigner = Get-ChildItem -Path (Join-Path $env:ANDROID_HOME "build-tools") -Filter "apksigner.bat" -Recurse -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+          if ($apksigner) {
+            & $apksigner.FullName verify --print-certs $apk.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "apksigner verification failed for $($apk.FullName)"
+            }
+          }
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
