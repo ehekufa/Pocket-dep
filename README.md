@@ -1,4 +1,4 @@
-# Pocket dep Source Code
+# Pocket Dep Source Code
 
 Contains editor, menu, and some other parts.
 
